@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 69d008ae1d623454881941a1d40a6872
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - resolutionDropdown: {instanceID: 0}
+  - fullscreenToggle: {instanceID: 0}
+  - soundToggle: {instanceID: 0}
+  - volumeSlider: {instanceID: 0}
+  - settingsPanel: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
