@@ -13,6 +13,8 @@ public class ClickHandler : MonoBehaviour
     public Slider sliderHealth;
     public TextMeshProUGUI textHealth;
     public AudioClip audioMov;
+    public AudioClip audioMov2;
+    public AudioClip audioMov3;
     public AudioSource audioSource;
 
     [Header("Icons")]
@@ -130,7 +132,19 @@ public class ClickHandler : MonoBehaviour
         if (basicUnit == null) return;
 
         basicUnit.GCnavMeshAgent();
-        audioSource.PlayOneShot(audioMov);
+        int a = Random.Range(0, 3);
+        switch (a)
+        {
+            case 0:
+                audioSource.PlayOneShot(audioMov);
+                break;
+            case 1:
+                audioSource.PlayOneShot(audioMov2);
+                break;
+            case 2:
+                audioSource.PlayOneShot(audioMov3);
+                break;
+        }
     }
 
     public void OpenMenuPanel() => unitMenu.SetActive(true);
