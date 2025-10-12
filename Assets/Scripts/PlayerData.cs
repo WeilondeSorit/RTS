@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using TMPro;
+using UnityEngine.Networking;
+using System.Text;
 
 [System.Serializable]
 public class BuildingData
@@ -23,9 +25,45 @@ public class PlayerSaveData
     public List<BuildingData> buildings = new List<BuildingData>();
 }
 
+// Классы для сериализации данных в Supabase
+[System.Serializable]
+public class SupabaseBuilding
+{
+    public string building_name;
+    public int health;
+    public int max_health;
+    public int position_x;
+    public int position_y;
+}
+
+[System.Serializable]
+public class SupabaseUnit
+{
+    public string unit_name;
+    public int health;
+    public int max_health;
+    public int position_x;
+    public int position_y;
+    public float speed;
+    public int? attack_range;
+    public int? damage;
+    public int armor;
+}
+
+[System.Serializable]
+public class SupabaseResponse
+{
+    public int id;
+    public string building_name;
+    public int position_x;
+    public int position_y;
+}
+
 public class PlayerData : MonoBehaviour
 {
     private string savePath;
+    private string supabaseUrl = "https://ceqdjafzolfhtqjjlvwg.supabase.co/rest/v1/";
+    private string supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlcWRqYWZ6b2xmaHRxampsdndnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNTAyMzQsImV4cCI6MjA3NTgyNjIzNH0.N_RQNgbW0jx7mlyUI67sQMaZp38xqMzFR6fJjNN4338";
 
     public string playerName;
     public int units;
@@ -51,7 +89,7 @@ public class PlayerData : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(10f);
+            yield return new WaitForSeconds(30f);
             SaveAllGame();
         }
     }
@@ -90,9 +128,83 @@ public class PlayerData : MonoBehaviour
             }
         }
 
+        // Сохраняем локально
         string json = JsonUtility.ToJson(saveData, true);
         File.WriteAllText(savePath, json);
-        Debug.Log("Game saved successfully");
+        Debug.Log("Game saved locally");
+
+        // Сохраняем в Supabase
+        StartCoroutine(SaveToSupabase(saveData));
+    }
+
+    IEnumerator SaveToSupabase(PlayerSaveData saveData)
+    {
+        Debug.Log("Starting Supabase save...");
+
+        // Сохраняем здания
+        yield return StartCoroutine(SaveBuildingsData(saveData.buildings));
+
+        Debug.Log("Supabase save completed");
+    }
+
+    IEnumerator SaveBuildingsData(List<BuildingData> buildings)
+    {
+        // Очищаем старые здания
+        string deleteUrl = $"{supabaseUrl}Building";
+        using (UnityWebRequest deleteRequest = UnityWebRequest.Delete(deleteUrl))
+        {
+            deleteRequest.SetRequestHeader("apikey", supabaseKey);
+            deleteRequest.SetRequestHeader("Authorization", $"Bearer {supabaseKey}");
+            deleteRequest.SetRequestHeader("Prefer", "return=minimal");
+
+            yield return deleteRequest.SendWebRequest();
+
+            if (deleteRequest.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogWarning($"Failed to delete old buildings: {deleteRequest.error}");
+            }
+        }
+
+        // Добавляем новые здания
+        foreach (var building in buildings)
+        {
+            var supabaseBuilding = new SupabaseBuilding
+            {
+                building_name = building.prefabName,
+                health = 100,
+                max_health = 100,
+                position_x = Mathf.RoundToInt(building.position.x),
+                position_y = Mathf.RoundToInt(building.position.z)
+            };
+
+            string jsonData = JsonUtility.ToJson(supabaseBuilding);
+            string url = $"{supabaseUrl}Building";
+
+            using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
+            {
+                byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
+                request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+                request.downloadHandler = new DownloadHandlerBuffer();
+                request.SetRequestHeader("Content-Type", "application/json");
+                request.SetRequestHeader("apikey", supabaseKey);
+                request.SetRequestHeader("Authorization", $"Bearer {supabaseKey}");
+                request.SetRequestHeader("Prefer", "return=representation");
+
+                yield return request.SendWebRequest();
+
+                if (request.result != UnityWebRequest.Result.Success)
+                {
+                    Debug.LogError($"Building save failed: {request.error}");
+                    Debug.Log($"Data: {jsonData}");
+                }
+                else
+                {
+                    Debug.Log($"Building {building.prefabName} saved to Supabase");
+                }
+            }
+        }
+
+        Debug.Log($"Saved {buildings.Count} buildings to Supabase");
     }
 
     void CleanDestroyedBuildings()
@@ -185,10 +297,41 @@ public class PlayerData : MonoBehaviour
 
     private void UpdateUI()
     {
-        coutUnits.text = units.ToString();
-        coutFoods.text = food.ToString();
-        coutWoods.text = wood.ToString();
-        coutRocks.text = rock.ToString();
+        if (coutUnits != null) coutUnits.text = units.ToString();
+        if (coutFoods != null) coutFoods.text = food.ToString();
+        if (coutWoods != null) coutWoods.text = wood.ToString();
+        if (coutRocks != null) coutRocks.text = rock.ToString();
+    }
+
+    // Метод для принудительного сохранения
+    public void ForceSave()
+    {
+        SaveAllGame();
+    }
+
+    // Метод для загрузки зданий из Supabase
+    IEnumerator LoadBuildingsFromSupabase()
+    {
+        string url = $"{supabaseUrl}Building";
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            request.SetRequestHeader("apikey", supabaseKey);
+            request.SetRequestHeader("Authorization", $"Bearer {supabaseKey}");
+            request.SetRequestHeader("Accept", "application/json");
+
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                string jsonResponse = request.downloadHandler.text;
+                Debug.Log($"Buildings loaded: {jsonResponse}");
+                // Здесь можно добавить парсинг JSON и создание зданий в игре
+            }
+            else
+            {
+                Debug.LogError($"Failed to load buildings: {request.error}");
+            }
+        }
     }
 }
 

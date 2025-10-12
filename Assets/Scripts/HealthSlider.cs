@@ -5,7 +5,7 @@ using UnityEngine.UI;
 public class HealthSlider : MonoBehaviour
 {
     public Slider slider;
-    public string tag;
+    public string targetTag;
     private BasicBulding basicBulding;
 
     // Оптимизированное значение максимального хп (500)
@@ -14,7 +14,7 @@ public class HealthSlider : MonoBehaviour
     void Start()
     {
         // Находим объект с тегом "Base"
-        GameObject baseObject = GameObject.FindGameObjectWithTag(tag);
+        GameObject baseObject = GameObject.FindGameObjectWithTag(targetTag);
         if (baseObject != null)
         {
             basicBulding = baseObject.GetComponent<BasicBulding>();
