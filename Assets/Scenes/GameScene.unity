@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 8b7dd0809c7c6498789fa32a61eaa6cb, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -2957,12 +2957,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   width: 100
   height: 100
-  scale: 9
+  scale: 20
   offsetX: 0
   offsetY: 0
   tree: {fileID: 1382659402361695440, guid: c2c69f8104c371c4a9ff5d159de70649, type: 3}
   rock: {fileID: 4412417125401228052, guid: 1a64972ad17ab9f4c8901e1a961e3a6f, type: 3}
   basePrefab: {fileID: 1131050632274006739, guid: 866e610fc65621b4aa0bcccd07ee493f, type: 3}
+  minTreeScale: 0.8
+  maxTreeScale: 1.2
+  minRockScale: 0.8
+  maxRockScale: 1.5
+  islandCount: 9
+  minIslandRadius: 10
+  maxIslandRadius: 20
   treeObstacle: {fileID: 3452343192776865247, guid: c2c69f8104c371c4a9ff5d159de70649, type: 3}
   rockObstacle: {fileID: -4243202692427493921, guid: 1a64972ad17ab9f4c8901e1a961e3a6f, type: 3}
   baseObstacle: {fileID: -7116224906970489757, guid: 6761c410843c8c047bdf217375134437, type: 3}
@@ -6256,7 +6263,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -20.999786}
+  m_AnchoredPosition: {x: 0, y: -20.999756}
   m_SizeDelta: {x: -614.048, y: -290.338}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2032362464

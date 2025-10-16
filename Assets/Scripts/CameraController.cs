@@ -21,13 +21,35 @@ public class CameraController : MonoBehaviour
 
     private void Start()
     {
-        // Автоматическое определение типа управления
+        // РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРё РѕРїСЂРµРґРµР»СЏРµРј С‚РёРї СѓРїСЂР°РІР»РµРЅРёСЏ
         useTouchControls = Application.isMobilePlatform;
         cam = GetComponent<Camera>();
 
         if (cam == null)
         {
             Debug.LogError("CameraController requires a Camera component!");
+            return;
+        }
+
+        // РџРµСЂРµРјРµС‰Р°РµРј РєР°РјРµСЂСѓ РЅР°Рґ Р±Р°Р·РѕР№ РїСЂРё СЃС‚Р°СЂС‚Рµ
+        MoveCameraToBase();
+    }
+
+    private void MoveCameraToBase()
+    {
+        GameObject baseObject = GameObject.FindGameObjectWithTag("Base");
+        
+        if (baseObject != null)
+        {
+            // РџРѕР»СѓС‡Р°РµРј РїРѕР·РёС†РёСЋ Р±Р°Р·С‹
+            Vector3 basePosition = baseObject.transform.position;
+            
+            // РџРµСЂРµРјРµС‰Р°РµРј РєР°РјРµСЂСѓ РЅР°Рґ Р±Р°Р·РѕР№, СЃРѕС…СЂР°РЅСЏСЏ С‚РµРєСѓС‰СѓСЋ РІС‹СЃРѕС‚Сѓ
+            transform.position = new Vector3(basePosition.x, transform.position.y, basePosition.z);
+        }
+        else
+        {
+            Debug.LogWarning("Base object with tag 'Base' not found! Camera will remain at default position.");
         }
     }
 
@@ -36,46 +58,39 @@ public class CameraController : MonoBehaviour
         if (useTouchControls)
         {
             HandleTouchInput();
-            HandlePinchZoom(); // Обработка зума щипком
+            HandlePinchZoom();
         }
         else
         {
             HandleKeyboardInput();
-            HandleMouseWheelZoom(); // Обработка зума колесиком мыши
+            HandleMouseWheelZoom();
         }
     }
 
     private void HandlePinchZoom()
     {
-        // Для зума щипком нужно два касания:cite[2]:cite[8]
         if (Input.touchCount == 2)
         {
             Touch touchZero = Input.GetTouch(0);
             Touch touchOne = Input.GetTouch(1);
 
-            // Получаем позиции касаний в предыдущем кадре
             Vector2 touchZeroPrevPos = touchZero.position - touchZero.deltaPosition;
             Vector2 touchOnePrevPos = touchOne.position - touchOne.deltaPosition;
 
-            // Вычисляем разницу расстояний между касаниями
             float prevTouchDeltaMag = (touchZeroPrevPos - touchOnePrevPos).magnitude;
             float touchDeltaMag = (touchZero.position - touchOne.position).magnitude;
 
-            // Разница в расстоянии (отрицательная = zoom in, положительная = zoom out)
             float deltaMagnitudeDiff = prevTouchDeltaMag - touchDeltaMag;
 
-            // Применяем зум:cite[8]
             ApplyZoom(deltaMagnitudeDiff * zoomSpeed * 0.01f);
         }
     }
 
     private void HandleMouseWheelZoom()
     {
-        // Input.GetAxis("Mouse ScrollWheel") возвращает значение прокрутки колесика:cite[3]:cite[4]
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll != 0)
         {
-            // Для перспективной камеры инвертируем направление:cite[3]
             float zoomAmount = scroll * zoomSpeed;
             if (usePerspectiveZoom) zoomAmount *= -1;
 
@@ -87,18 +102,15 @@ public class CameraController : MonoBehaviour
     {
         if (cam.orthographic && !usePerspectiveZoom)
         {
-            // Для ортографической камеры изменяем orthographicSize:cite[4]:cite[8]
             cam.orthographicSize += zoomAmount;
             cam.orthographicSize = Mathf.Clamp(cam.orthographicSize, minZoom, maxZoom);
         }
         else
         {
-            // Для перспективной камеры изменяем fieldOfView:cite[3]:cite[4]:cite[8]
             cam.fieldOfView += zoomAmount;
             cam.fieldOfView = Mathf.Clamp(cam.fieldOfView, minZoom, maxZoom);
         }
     }
-
 
     private void HandleKeyboardInput()
     {
@@ -138,7 +150,6 @@ public class CameraController : MonoBehaviour
         }
         else
         {
-            // Альтернативная реализация для мыши в редакторе/тестировании
             HandleMouseInput();
         }
     }
@@ -172,7 +183,6 @@ public class CameraController : MonoBehaviour
         transform.position += new Vector3(-movX, 0, -movZ);
     }
 
-    // Метод для принудительного переключения типа управления
     public void SetControlType(bool useTouch)
     {
         useTouchControls = useTouch;

@@ -15,7 +15,7 @@ public class GetDataFromSupabase : MonoBehaviour
 
     IEnumerator GetPlayerData()
     {
-        string url = $"{supabaseUrl}Player?id=eq.1";
+        string url = $"{supabaseUrl}player?id=eq.1";
         using (UnityWebRequest www = UnityWebRequest.Get(url))
         {
             www.SetRequestHeader("apikey", supabaseKey);
@@ -37,7 +37,7 @@ public class GetDataFromSupabase : MonoBehaviour
 
     IEnumerator GetBuildingsData()
     {
-        string url = $"{supabaseUrl}Building?player_id=eq.1";
+        string url = $"{supabaseUrl}building?player_id=eq.1";
         using (UnityWebRequest www = UnityWebRequest.Get(url))
         {
             www.SetRequestHeader("apikey", supabaseKey);

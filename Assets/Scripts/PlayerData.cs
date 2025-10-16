@@ -5,7 +5,21 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.Networking;
 using System.Text;
+[System.Serializable]
+public class SupabasePlayerData
+{
+    public string player_name;
+    public int units;
+    public int food;
+    public int wood;
+    public int rock;
+}
 
+[System.Serializable]
+public class SupabaseBuildingList
+{
+    public SupabaseBuilding[] buildings;
+}
 [System.Serializable]
 public class BuildingData
 {
@@ -150,7 +164,7 @@ public class PlayerData : MonoBehaviour
     IEnumerator SaveBuildingsData(List<BuildingData> buildings)
     {
         // Очищаем старые здания
-        string deleteUrl = $"{supabaseUrl}Building";
+        string deleteUrl = $"{supabaseUrl}building";
         using (UnityWebRequest deleteRequest = UnityWebRequest.Delete(deleteUrl))
         {
             deleteRequest.SetRequestHeader("apikey", supabaseKey);
@@ -178,7 +192,7 @@ public class PlayerData : MonoBehaviour
             };
 
             string jsonData = JsonUtility.ToJson(supabaseBuilding);
-            string url = $"{supabaseUrl}Building";
+            string url = $"{supabaseUrl}building";
 
             using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
             {
@@ -219,6 +233,172 @@ public class PlayerData : MonoBehaviour
     }
 
     public void LoadGame()
+    {
+        StartCoroutine(LoadGameCoroutine());
+    }
+
+    private IEnumerator LoadGameCoroutine()
+    {
+        bool databaseLoadSuccessful = false;
+
+        // Пытаемся загрузить из базы данных
+        yield return StartCoroutine(LoadFromDatabase((success) => {
+            databaseLoadSuccessful = success;
+        }));
+
+        // Если загрузка из базы данных не удалась, загружаем из JSON
+        if (!databaseLoadSuccessful)
+        {
+            LoadFromJSON();
+            Debug.Log("Database load failed. Loaded from JSON backup.");
+        }
+        else
+        {
+            Debug.Log("Game successfully loaded from database.");
+        }
+
+        UpdateUI();
+    }
+
+    private IEnumerator LoadFromDatabase(System.Action<bool> onComplete)
+    {
+        bool success = false;
+
+        // Загружаем данные игрока из базы данных
+        bool playerDataSuccess = false;
+        yield return StartCoroutine(LoadPlayerDataFromDatabase((result) => {
+            playerDataSuccess = result;
+        }));
+
+        // Загружаем здания из базы данных
+        bool buildingsSuccess = false;
+        if (playerDataSuccess)
+        {
+            yield return StartCoroutine(LoadBuildingsFromDatabase((result) => {
+                buildingsSuccess = result;
+            }));
+        }
+
+        success = playerDataSuccess && buildingsSuccess;
+        onComplete?.Invoke(success);
+    }
+
+    private IEnumerator LoadPlayerDataFromDatabase(System.Action<bool> onComplete)
+    {
+        string url = $"{supabaseUrl}player_data?player_id=eq.1";
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            request.SetRequestHeader("apikey", supabaseKey);
+            request.SetRequestHeader("Authorization", $"Bearer {supabaseKey}");
+            request.SetRequestHeader("Accept", "application/json");
+
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                string jsonResponse = request.downloadHandler.text;
+
+                // Убираем квадратные скобки, так как Supabase возвращает массив
+                if (jsonResponse.StartsWith("[") && jsonResponse.EndsWith("]"))
+                {
+                    jsonResponse = jsonResponse.Substring(1, jsonResponse.Length - 2);
+                }
+
+                if (!string.IsNullOrEmpty(jsonResponse) && jsonResponse != "[]")
+                {
+                    try
+                    {
+                        var playerData = JsonUtility.FromJson<SupabasePlayerData>(jsonResponse);
+                        if (playerData != null)
+                        {
+                            playerName = playerData.player_name;
+                            units = playerData.units;
+                            food = playerData.food;
+                            wood = playerData.wood;
+                            rock = playerData.rock;
+                            onComplete?.Invoke(true);
+                            yield break;
+                        }
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogError($"Error parsing player data: {e.Message}");
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogError($"Failed to load player data from database: {request.error}");
+            }
+
+            onComplete?.Invoke(false);
+        }
+    }
+
+    private IEnumerator LoadBuildingsFromDatabase(System.Action<bool> onComplete)
+    {
+        string url = $"{supabaseUrl}building";
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            request.SetRequestHeader("apikey", supabaseKey);
+            request.SetRequestHeader("Authorization", $"Bearer {supabaseKey}");
+            request.SetRequestHeader("Accept", "application/json");
+
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                string jsonResponse = request.downloadHandler.text;
+
+                try
+                {
+                    // Оборачиваем ответ в объект для десериализации
+                    string wrappedJson = "{\"buildings\":" + jsonResponse + "}";
+                    var buildingList = JsonUtility.FromJson<SupabaseBuildingList>(wrappedJson);
+
+                    if (buildingList != null && buildingList.buildings != null && buildingList.buildings.Length > 0)
+                    {
+                        ClearExistingBuildings();
+
+                        foreach (var building in buildingList.buildings)
+                        {
+                            GameObject prefab = System.Array.Find(buildingPrefabs,
+                                p => p != null && p.name == building.building_name);
+
+                            if (prefab != null)
+                            {
+                                Vector3 position = new Vector3(building.position_x, 0, building.position_y);
+                                var newBuilding = Instantiate(prefab, position, Quaternion.identity);
+
+                                if (newBuilding != null)
+                                {
+                                    placedBuildings.Add(newBuilding);
+                                }
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"Prefab {building.building_name} not found!");
+                            }
+                        }
+                        onComplete?.Invoke(true);
+                        yield break;
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Error parsing buildings data: {e.Message}");
+                }
+            }
+            else
+            {
+                Debug.LogError($"Failed to load buildings from database: {request.error}");
+            }
+
+            onComplete?.Invoke(false);
+        }
+    }
+
+    private void LoadFromJSON()
     {
         if (File.Exists(savePath))
         {
@@ -312,7 +492,7 @@ public class PlayerData : MonoBehaviour
     // Метод для загрузки зданий из Supabase
     IEnumerator LoadBuildingsFromSupabase()
     {
-        string url = $"{supabaseUrl}Building";
+        string url = $"{supabaseUrl}building";
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
             request.SetRequestHeader("apikey", supabaseKey);
