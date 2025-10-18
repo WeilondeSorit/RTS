@@ -18,21 +18,25 @@ public class GameManager : MonoBehaviour
     private bool gameEnded = false;
     private bool checkAllowed = false;
 
-    // Имя файла сохранения
+    // РџСѓС‚СЊ Рє С„Р°Р№Р»Сѓ СЃРѕС…СЂР°РЅРµРЅРёСЏ
     private string saveFileName = "save.json";
+    private PlayerData playerData;
 
     void Start()
     {
-        // Поиск баз по тегам
+        // РќР°С…РѕРґРёРј Р±Р°Р·С‹ РїРѕ С‚РµРіР°Рј
         playerBase = GameObject.FindWithTag("Base");
         enemyBase = GameObject.FindWithTag("EnemyBase");
+        playerData = FindObjectOfType<PlayerData>();
 
         if (playerBase == null)
-            Debug.LogError("Не найдена база игрока! Тег: 'Base'");
+            Debug.LogError("РќРµ РЅР°Р№РґРµРЅР° Р±Р°Р·Р° РёРіСЂРѕРєР°! РўРµРі: 'Base'");
         if (enemyBase == null)
-            Debug.LogError("Не найдена база врага! Тег: 'EnemyBase'");
+            Debug.LogError("РќРµ РЅР°Р№РґРµРЅР° Р±Р°Р·Р° РІСЂР°РіР°! РўРµРі: 'EnemyBase'");
+        if (playerData == null)
+            Debug.LogError("PlayerData РЅРµ РЅР°Р№РґРµРЅ!");
 
-        // Разрешаем проверку через 5 секунд
+        // Р Р°Р·СЂРµС€Р°РµРј РїСЂРѕРІРµСЂРєСѓ С‡РµСЂРµР· 5 СЃРµРєСѓРЅРґ
         Invoke(nameof(AllowCheck), 5f);
     }
 
@@ -40,7 +44,7 @@ public class GameManager : MonoBehaviour
     {
         if (gameEnded) return;
 
-        // Если проверка разрешена, отслеживаем существование баз
+        // Р•СЃР»Рё РїСЂРѕРІРµСЂРєР° СЂР°Р·СЂРµС€РµРЅР°, РїСЂРѕРІРµСЂСЏРµРј СѓСЃР»РѕРІРёСЏ РїРѕР±РµРґС‹/РїСЂРѕРёРіСЂС‹С€Р°
         if (checkAllowed)
         {
             if (playerBase == null)
@@ -58,24 +62,26 @@ public class GameManager : MonoBehaviour
 
     void YouLoose()
     {
-        // Удаление файла сохранения при открытии меню результатов
+        // РЈРґР°Р»СЏРµРј РґР°РЅРЅС‹Рµ СЃРѕС…СЂР°РЅРµРЅРёСЏ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё РёРіСЂС‹
         DeleteSaveFile();
+        ClearAllBuildingsData();
 
         menu.SetActive(true);
         results.text = "You've lost";
         audioSource.PlayOneShot(audioLoose);
-        Time.timeScale = 0f; // Остановка игрового времени
+        Time.timeScale = 0f; // РћСЃС‚Р°РЅР°РІР»РёРІР°РµРј РёРіСЂРѕРІРѕРµ РІСЂРµРјСЏ
     }
 
     void YouWin()
     {
-        // Удаление файла сохранения при открытии меню результатов
+        // РЈРґР°Р»СЏРµРј РґР°РЅРЅС‹Рµ СЃРѕС…СЂР°РЅРµРЅРёСЏ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё РёРіСЂС‹
         DeleteSaveFile();
+        ClearAllBuildingsData();
 
         menu.SetActive(true);
         results.text = "You've won";
         audioSource.PlayOneShot(audioWin);
-        Time.timeScale = 0f; // Остановка игрового времени
+        Time.timeScale = 0f; // РћСЃС‚Р°РЅР°РІР»РёРІР°РµРј РёРіСЂРѕРІРѕРµ РІСЂРµРјСЏ
     }
 
     void AllowCheck()
@@ -85,7 +91,7 @@ public class GameManager : MonoBehaviour
 
     public void GoBack()
     {
-        Time.timeScale = 1f; // Восстановление времени
+        Time.timeScale = 1f; // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј РІСЂРµРјСЏ
         SceneManager.LoadScene("SampleScene");
     }
 
@@ -95,11 +101,19 @@ public class GameManager : MonoBehaviour
         if (File.Exists(savePath))
         {
             File.Delete(savePath);
-            Debug.Log("Файл сохранения удален.");
+            Debug.Log("Р¤Р°Р№Р» СЃРѕС…СЂР°РЅРµРЅРёСЏ СѓРґР°Р»РµРЅ.");
         }
         else
         {
-            Debug.Log("Файл сохранения не найден для удаления.");
+            Debug.Log("Р¤Р°Р№Р» СЃРѕС…СЂР°РЅРµРЅРёСЏ РЅРµ РЅР°Р№РґРµРЅ РґР»СЏ СѓРґР°Р»РµРЅРёСЏ.");
+        }
+    }
+
+    void ClearAllBuildingsData()
+    {
+        if (playerData != null)
+        {
+            playerData.ClearAllBuildingsData();
         }
     }
 }

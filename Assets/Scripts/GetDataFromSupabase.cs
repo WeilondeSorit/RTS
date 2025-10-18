@@ -9,13 +9,13 @@ public class GetDataFromSupabase : MonoBehaviour
 
     void Start()
     {
-        // Пример загрузки данных при старте
+        // Р—Р°РіСЂСѓР¶Р°РµРј РґР°РЅРЅС‹Рµ РёРіСЂРѕРєР° РїСЂРё СЃС‚Р°СЂС‚Рµ
         StartCoroutine(GetPlayerData());
     }
 
     IEnumerator GetPlayerData()
     {
-        string url = $"{supabaseUrl}player?id=eq.1";
+        string url = $"{supabaseUrl}player_data?player_id=eq.1";
         using (UnityWebRequest www = UnityWebRequest.Get(url))
         {
             www.SetRequestHeader("apikey", supabaseKey);
@@ -37,7 +37,7 @@ public class GetDataFromSupabase : MonoBehaviour
 
     IEnumerator GetBuildingsData()
     {
-        string url = $"{supabaseUrl}building?player_id=eq.1";
+        string url = $"{supabaseUrl}building";
         using (UnityWebRequest www = UnityWebRequest.Get(url))
         {
             www.SetRequestHeader("apikey", supabaseKey);
@@ -57,7 +57,7 @@ public class GetDataFromSupabase : MonoBehaviour
         }
     }
 
-    // Вызов этих методов из UI или других скриптов
+    // РњРµС‚РѕРґ РґР»СЏ РІС‹Р·РѕРІР° РёР· UI РґР»СЏ Р·Р°РіСЂСѓР·РєРё РґР°РЅРЅС‹С…
     public void LoadPlayerData()
     {
         StartCoroutine(GetPlayerData());
