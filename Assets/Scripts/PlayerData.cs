@@ -6,7 +6,7 @@ using TMPro;
 using UnityEngine.Networking;
 using System.Text;
 
-//этот файл идет на диплом
+//этот файл идет на курсач
 [System.Serializable]
 public class SupabasePlayerData
 {
