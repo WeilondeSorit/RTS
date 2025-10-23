@@ -17,7 +17,7 @@ DROP TABLE IF EXISTS Achievement CASCADE;
 DROP TABLE IF EXISTS Settings CASCADE;
 DROP TABLE IF EXISTS player_data CASCADE;
 DROP TABLE IF EXISTS Player CASCADE;
-
+-- я уже ненавижу этот файл. по нему была вся курсовая. даже не знаю, допишу ли ее
 -- Таблица Игрок (основная сущность)
 CREATE TABLE Player (
     id SERIAL PRIMARY KEY,
