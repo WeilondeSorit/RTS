@@ -4,7 +4,7 @@ using UnityEngine.AI;
 public class WorkerUnit : BasicUnit
 {
 	
-
+//очень полезный файл. он нужен только для того, чтобы триггерить ClickHandler 
 	/*
 	public void GatherResource()
 	{   

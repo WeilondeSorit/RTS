@@ -7,6 +7,7 @@ public class ExitGame : MonoBehaviour
     public void Quit()
     {
         Application.Quit();
-        Debug.Log("����� �������");
+        Debug.Log("Ñöåíà çàêðûòà");
     }
 }
+//я не знаю, для чего делала это отдельным файлом

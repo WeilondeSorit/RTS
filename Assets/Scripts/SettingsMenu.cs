@@ -4,7 +4,8 @@ using TMPro;
 
 public class SettingsMenu : MonoBehaviour
 {
-    [Header("UI ��������")]
+//пофиксить меню настроек
+    [Header("UI Ýëåìåíòû")]
     public TMP_Dropdown resolutionDropdown;
     public Toggle soundToggle;
     public Slider volumeSlider;
