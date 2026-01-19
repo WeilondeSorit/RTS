@@ -64,7 +64,10 @@ public class GameManager : MonoBehaviour
     {
         // Удаляем данные сохранения при завершении игры
         DeleteSaveFile();
-        ClearAllBuildingsData();
+
+        // Отправляем запрос на удаление данных с сервера
+        if (playerData != null)
+            playerData.SendDeleteRequest();
 
         menu.SetActive(true);
         results.text = "You've lost";
@@ -76,7 +79,10 @@ public class GameManager : MonoBehaviour
     {
         // Удаляем данные сохранения при завершении игры
         DeleteSaveFile();
-        ClearAllBuildingsData();
+
+        // Отправляем запрос на удаление данных с сервера
+        if (playerData != null)
+            playerData.SendDeleteRequest();
 
         menu.SetActive(true);
         results.text = "You've won";
@@ -92,7 +98,7 @@ public class GameManager : MonoBehaviour
     public void GoBack()
     {
         Time.timeScale = 1f; // Восстанавливаем время
-        SceneManager.LoadScene("SampleScene");
+        SimpleLoadingManager.LoadSceneWithLoading("SampleScene");
     }
 
     void DeleteSaveFile()
@@ -109,11 +115,21 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void ClearAllBuildingsData()
+    // Сохранение игры (вызывайте этот метод при необходимости)
+    public void SaveGame()
     {
         if (playerData != null)
         {
-            playerData.ClearAllBuildingsData();
+            playerData.SaveGame();
+        }
+    }
+
+    // Загрузка игры
+    public void LoadGame()
+    {
+        if (playerData != null)
+        {
+            playerData.LoadGame();
         }
     }
 }

@@ -5,10 +5,10 @@ using UnityEngine.SceneManagement;
 
 public class StartGame : MonoBehaviour
 {
-    //Дописать скрипт сохранения данных настроек в JSON
+    //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ JSON
     public void Starting()
     {
         Time.timeScale = 1.0f;
-        SceneManager.LoadScene("GameScene");
+        SimpleLoadingManager.LoadSceneWithLoading("GameScene");
     }
 }
