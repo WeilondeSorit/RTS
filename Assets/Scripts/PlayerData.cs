@@ -2,368 +2,256 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
-using UnityEngine.Networking;
-using System.Text;
-using System.IO;
+using System;
 
 public class PlayerData : MonoBehaviour
 {
-    [Header("Game Data")]
-    public string playerId = "player_1";
-    public string playerName = "Player";
+    public static PlayerData Instance { get; private set; }
+
+    // ===== ДАННЫЕ С СЕРВЕРА (MainServer) =====
+    public string playerId;          // GUID как строка
+    public string playerName;
+    public string authToken;
+    public int experience;
+    public int currency;             // валюта
+    public int wins;
+    public int losses;
+    public List<int> purchasedItems = new List<int>();
+    public Dictionary<string, int> unitUpgrades = new Dictionary<string, int>();
+
+    // ===== ЛОКАЛЬНЫЕ РЕСУРСЫ ДЛЯ ТЕКУЩЕЙ СЕССИИ =====
     public int units;
-    public int food;
-    public int wood;
-    public int rock;
+    public int food = 500;
+    public int wood = 300;
+    public int rock = 200;
 
-    [Header("References")]
-    public TextMeshProUGUI coutUnits;
-    public TextMeshProUGUI coutFoods;
-    public TextMeshProUGUI coutWoods;
-    public TextMeshProUGUI coutRocks;
+    // ===== UI =====
+    public TextMeshProUGUI unitsText;
+    public TextMeshProUGUI foodText;
+    public TextMeshProUGUI woodText;
+    public TextMeshProUGUI rockText;
+    public TextMeshProUGUI questDisplayText;
 
-    [Header("Server Configuration")]
-    [SerializeField] private string serverUrl = "http://localhost:5000";
+    // ===== КОНФИГУРАЦИЯ =====
+    [SerializeField] private bool useServerSync = false;
+    [SerializeField] public string playerServiceUrl = "http://localhost:8082";
+    [SerializeField] private float autoSaveInterval = 30f;
 
-    [Header("Prefabs for Loading")]
-    public GameObject[] buildingPrefabs;
-    public GameObject[] unitPrefabs;
-    public GameObject treePrefab;
-    public GameObject rockPrefab;
+    private AchievementSystem achievementSystem;
+    private float lastSaveTime = 0f;
+    private bool isInitialized = false;
 
-    void Start()
+    private void Awake()
     {
-        // Сначала тестируем соединение
-        StartCoroutine(TestServerConnection());
-
-        // Затем загружаем игру (если нужно)
-        // Invoke(nameof(LoadGame), 2f);
-    }
-
-    IEnumerator TestServerConnection()
-    {
-        string url = $"{serverUrl}/api/game/test";
-        Debug.Log($"🔍 Testing connection to: {url}");
-
-        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        if (Instance == null)
         {
-            yield return request.SendWebRequest();
-
-            Debug.Log($"Status Code: {request.responseCode}");
-            Debug.Log($"Error: {request.error}");
-
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                Debug.Log($"✅ Server connection successful!");
-                Debug.Log($"Response: {request.downloadHandler.text}");
-            }
-            else
-            {
-                Debug.LogError($"❌ Server connection failed!");
-                Debug.LogError($"Error details: {request.error}");
-                Debug.Log($"Response: {request.downloadHandler?.text}");
-
-                // Проверяем другие возможные порты
-                yield return StartCoroutine(TestAlternativePorts());
-            }
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
-    }
-
-    IEnumerator TestAlternativePorts()
-    {
-        string[] ports = { "5000", "5001", "8080", "8081" };
-
-        foreach (var port in ports)
+        else
         {
-            string url = $"http://localhost:{port}/api/game/test";
-            Debug.Log($"Trying port {port}: {url}");
-
-            using (UnityWebRequest request = UnityWebRequest.Get(url))
-            {
-                request.timeout = 3;
-                yield return request.SendWebRequest();
-
-                if (request.result == UnityWebRequest.Result.Success)
-                {
-                    Debug.Log($"✅ Found server on port {port}!");
-                    Debug.Log($"Response: {request.downloadHandler.text}");
-                    serverUrl = $"http://localhost:{port}";
-                    yield break;
-                }
-            }
-        }
-
-        Debug.LogError("❌ Could not find server on any port!");
-    }
-
-    public void LoadGame()
-    {
-        StartCoroutine(LoadGameCoroutine());
-    }
-
-    private IEnumerator LoadGameCoroutine()
-    {
-        string url = $"{serverUrl}/api/game/load/{playerId}";
-        Debug.Log($"📥 Loading game from: {url}");
-
-        using (UnityWebRequest request = UnityWebRequest.Get(url))
-        {
-            request.timeout = 5;
-            yield return request.SendWebRequest();
-
-            Debug.Log($"Status: {request.responseCode}");
-            Debug.Log($"Error: {request.error}");
-
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                Debug.Log($"✅ Game loaded!");
-                Debug.Log($"Response: {request.downloadHandler.text}");
-
-                // Десериализуем ответ
-                GameState gameState = JsonUtility.FromJson<GameState>(request.downloadHandler.text);
-                ApplyGameState(gameState);
-            }
-            else
-            {
-                Debug.LogError($"❌ Failed to load game: {request.error}");
-                Debug.Log($"Response body: {request.downloadHandler?.text}");
-            }
-        }
-    }
-
-    // Новый метод для сохранения полного состояния игры
-    public void SaveGame()
-    {
-        StartCoroutine(SaveGameCoroutine());
-    }
-
-    private IEnumerator SaveGameCoroutine()
-    {
-        // Собираем все данные игры
-        GameState gameState = new GameState
-        {
-            PlayerData = new PlayerDataEntity
-            {
-                PlayerId = playerId,
-                PlayerName = playerName,
-                Units = units,
-                Food = food,
-                Wood = wood,
-                Rock = rock
-            },
-            Units = DataCollector.CollectAllUnits(),
-            Buildings = DataCollector.CollectAllBuildings(),
-            Resources = DataCollector.CollectResources()
-        };
-
-        string url = $"{serverUrl}/api/game/save/{playerId}";
-        string jsonData = JsonUtility.ToJson(gameState, true);
-        Debug.Log($"Saving game state...");
-
-        using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
-        {
-            byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
-
-            yield return request.SendWebRequest();
-
-            Debug.Log($"Save Status: {request.responseCode}");
-            Debug.Log($"Error: {request.error}");
-
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                Debug.Log($"✅ Game state saved!");
-                Debug.Log($"Response: {request.downloadHandler.text}");
-            }
-            else
-            {
-                Debug.LogError($"❌ Save failed: {request.error}");
-                Debug.Log($"Response: {request.downloadHandler?.text}");
-            }
-        }
-    }
-
-    // Новый метод для применения загруженного состояния
-    private void ApplyGameState(GameState gameState)
-    {
-        if (gameState == null || gameState.PlayerData == null)
-        {
-            Debug.LogError("Invalid game state received");
+            Destroy(gameObject);
             return;
         }
 
-        // Применяем данные игрока
-        playerName = gameState.PlayerData.PlayerName;
-        units = gameState.PlayerData.Units;
-        food = gameState.PlayerData.Food;
-        wood = gameState.PlayerData.Wood;
-        rock = gameState.PlayerData.Rock;
+        achievementSystem = gameObject.AddComponent<AchievementSystem>();
+        achievementSystem.Initialize(this);
+    }
 
-        Debug.Log($"Applied player data: {playerName}, Units: {units}, Food: {food}, Wood: {wood}, Rock: {rock}");
+    private void Start()
+    {
+        if (PlayerPrefs.HasKey("PlayerId"))
+        {
+            LoadSession();
+            LoadPlayerData();
+            isInitialized = true;
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ Player not authenticated. Redirecting to login...");
+            UnityEngine.SceneManagement.SceneManager.LoadScene("LoginScene");
+        }
+    }
+
+    private void Update()
+    {
+        if (isInitialized && Time.time - lastSaveTime >= autoSaveInterval)
+        {
+            SavePlayerData();
+            lastSaveTime = Time.time;
+        }
+    }
+
+    // ===== АВТОРИЗАЦИЯ (принимает строку GUID) =====
+    public void SetAuthToken(string token, string userId, string username)
+    {
+        authToken = token;
+        playerId = userId;
+        playerName = username;
+
+        PlayerPrefs.SetString("AuthToken", token);
+        PlayerPrefs.SetString("PlayerId", userId);
+        PlayerPrefs.SetString("PlayerName", username);
+        PlayerPrefs.Save();
+
+        Debug.Log($"✅ Authenticated: {username} (ID: {playerId})");
+    }
+
+    // Перегрузка для обратной совместимости (если где-то передаётся int)
+    public void SetAuthToken(string token, int userId, string username)
+    {
+        SetAuthToken(token, userId.ToString(), username);
+    }
+
+    private void LoadSession()
+    {
+        authToken = PlayerPrefs.GetString("AuthToken");
+        playerId = PlayerPrefs.GetString("PlayerId", "");
+        playerName = PlayerPrefs.GetString("PlayerName", "Player");
+        Debug.Log($"🔄 Loaded session for: {playerName} (ID: {playerId})");
+    }
+
+    // Обновление данных с сервера
+    public void UpdateFromServer(PlayerDataResponse serverData)
+    {
+        experience = serverData.experience;
+        currency = serverData.currency;
+        wins = serverData.wins;
+        losses = serverData.losses;
+        purchasedItems = serverData.purchasedItems ?? new List<int>();
+        unitUpgrades = serverData.unitUpgrades ?? new Dictionary<string, int>();
+
+        SavePlayerData();
+        Debug.Log($"✅ Updated from server: XP={experience}, Currency={currency}, Wins={wins}, Losses={losses}");
+    }
+
+    public void LoadPlayerData()
+    {
+        if (PlayerPrefs.HasKey($"Player_{playerId}_Data"))
+        {
+            try
+            {
+                string json = PlayerPrefs.GetString($"Player_{playerId}_Data");
+                var data = JsonUtility.FromJson<PlayerSaveData>(json);
+                units = data.units;
+                food = data.food;
+                wood = data.wood;
+                rock = data.rock;
+                experience = data.experience;
+                currency = data.currency;
+                wins = data.wins;
+                losses = data.losses;
+                if (data.purchasedItems != null) purchasedItems = data.purchasedItems;
+                if (data.unitUpgrades != null) unitUpgrades = data.unitUpgrades;
+                Debug.Log($"✅ Loaded local data: Units={units}, Food={food}, Wood={wood}, Rock={rock}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"❌ Load error: {ex.Message}. Using defaults.");
+            }
+        }
+        else
+        {
+            Debug.Log("🆕 New player - using default resources");
+        }
+
         UpdateUI();
-
-        // Создаем здания
-        if (gameState.Buildings != null)
+        if (achievementSystem != null)
         {
-            ApplyBuildings(gameState.Buildings);
-        }
-
-        // Создаем юнитов
-        if (gameState.Units != null)
-        {
-            ApplyUnits(gameState.Units);
-        }
-
-        // Создаем ресурсы
-        if (gameState.Resources != null)
-        {
-            ApplyResources(gameState.Resources);
+            achievementSystem.questDisplayText = GameObject.FindWithTag("QuestText")?.GetComponent<TextMeshProUGUI>();
+            achievementSystem.LoadAchievements();
         }
     }
 
-    private void ApplyBuildings(List<BuildingEntity> buildings)
+    public void SavePlayerData()
     {
-        foreach (BuildingEntity building in buildings)
+        var data = new PlayerSaveData
         {
-            // Найти префаб по типу здания
-            GameObject prefab = GetBuildingPrefab(building.BuildingType);
-            if (prefab != null)
-            {
-                GameObject buildingObj = Instantiate(prefab,
-                    new Vector3(building.CoordX, 0, building.CoordY),
-                    Quaternion.identity);
+            playerId = playerId,
+            playerName = playerName,
+            units = units,
+            food = food,
+            wood = wood,
+            rock = rock,
+            experience = experience,
+            currency = currency,
+            wins = wins,
+            losses = losses,
+            purchasedItems = purchasedItems,
+            unitUpgrades = unitUpgrades,
+            lastSaved = DateTime.UtcNow.ToString("o")
+        };
 
-                // Устанавливаем здоровье
-                Health health = buildingObj.GetComponent<Health>();
-                if (health != null)
-                {
-                    health.health = building.CurrentHealth;
-                    health.maxHealth = building.MaxHealth;
-                }
-
-                // Устанавливаем тег
-                if (building.BuildingType == "MainBuilding")
-                    buildingObj.tag = "Base";
-                else
-                    buildingObj.tag = "Building";
-
-                Debug.Log($"Created building: {building.BuildingType} at ({building.CoordX}, {building.CoordY})");
-            }
-        }
+        string json = JsonUtility.ToJson(data, true);
+        PlayerPrefs.SetString($"Player_{playerId}_Data", json);
+        PlayerPrefs.Save();
+        Debug.Log($"💾 Saved player data locally (ID: {playerId})");
     }
 
-    private void ApplyUnits(List<UnitEntity> units)
+    // ===== ИГРОВЫЕ СОБЫТИЯ =====
+    public void OnEnemyUnitKilled(string unitType)
     {
-        foreach (UnitEntity unit in units)
-        {
-            GameObject prefab = GetUnitPrefab(unit.UnitType);
-            if (prefab != null)
-            {
-                GameObject unitObj = Instantiate(prefab,
-                    new Vector3(unit.CoordX, 0, unit.CoordY),
-                    Quaternion.identity);
-
-                // Устанавливаем здоровье
-                Health health = unitObj.GetComponent<Health>();
-                if (health != null)
-                {
-                    health.health = unit.CurrentHealth;
-                    health.maxHealth = unit.MaxHealth;
-                }
-
-                unitObj.tag = unit.UnitType;
-                Debug.Log($"Created unit: {unit.UnitType} at ({unit.CoordX}, {unit.CoordY})");
-            }
-        }
-    }
-
-    private void ApplyResources(List<ResourceEntity> resources)
-    {
-        foreach (ResourceEntity resource in resources)
-        {
-            GameObject prefab = resource.Type == "Tree" ? treePrefab : rockPrefab;
-            if (prefab != null)
-            {
-                GameObject resourceObj = Instantiate(prefab,
-                    new Vector3(resource.CoordX, 0, resource.CoordY),
-                    Quaternion.identity);
-
-                resourceObj.tag = resource.Type;
-                Debug.Log($"Created resource: {resource.Type} at ({resource.CoordX}, {resource.CoordY})");
-            }
-        }
-    }
-
-    private GameObject GetBuildingPrefab(string buildingType)
-    {
-        foreach (GameObject prefab in buildingPrefabs)
-        {
-            if (prefab.name.Contains(buildingType))
-                return prefab;
-        }
-        return null;
-    }
-
-    private GameObject GetUnitPrefab(string unitType)
-    {
-        foreach (GameObject prefab in unitPrefabs)
-        {
-            if (prefab.name.Contains(unitType))
-                return prefab;
-        }
-        return null;
-    }
-
-    // Метод для удаления игры с сервера
-    public IEnumerator DeleteGameCoroutine()
-    {
-        string url = $"{serverUrl}/api/game/delete/{playerId}";
-        Debug.Log($"🗑️ Deleting game: {url}");
-
-        using (UnityWebRequest request = UnityWebRequest.Delete(url))
-        {
-            yield return request.SendWebRequest();
-
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                Debug.Log($"✅ Game deleted from server!");
-            }
-            else
-            {
-                Debug.LogError($"❌ Delete failed: {request.error}");
-            }
-        }
-    }
-
-    // Публичный метод для удаления (вызывается из GameManager)
-    public void SendDeleteRequest()
-    {
-        StartCoroutine(DeleteGameCoroutine());
-    }
-
-    void Update()
-    {
+        achievementSystem?.OnEnemyUnitKilled(unitType);
+        food += 5;
         UpdateUI();
+        SavePlayerData();
     }
 
+    public void OnResourceCollected(string resourceType, int amount)
+    {
+        switch (resourceType.ToLower())
+        {
+            case "food": food += amount; break;
+            case "wood": wood += amount; break;
+            case "rock": rock += amount; break;
+            default: return;
+        }
+        UpdateUI();
+        SavePlayerData();
+    }
+
+    // ===== UI =====
     private void UpdateUI()
     {
-        if (coutUnits != null) coutUnits.text = units.ToString();
-        if (coutFoods != null) coutFoods.text = food.ToString();
-        if (coutWoods != null) coutWoods.text = wood.ToString();
-        if (coutRocks != null) coutRocks.text = rock.ToString();
+        if (unitsText != null) unitsText.text = units.ToString();
+        if (foodText != null) foodText.text = food.ToString();
+        if (woodText != null) woodText.text = wood.ToString();
+        if (rockText != null) rockText.text = rock.ToString();
+    }
+
+    public void UpdateQuestDisplay(string text)
+    {
+        if (questDisplayText != null) questDisplayText.text = text;
+    }
+
+    // ===== КЛАССЫ ДЛЯ СОХРАНЕНИЯ =====
+    [System.Serializable]
+    public class PlayerSaveData
+    {
+        public string playerId;
+        public string playerName;
+        public int units;
+        public int food;
+        public int wood;
+        public int rock;
+        public int experience;
+        public int currency;
+        public int wins;
+        public int losses;
+        public List<int> purchasedItems;
+        public Dictionary<string, int> unitUpgrades;
+        public string lastSaved;
     }
 }
 
+// Класс ответа от сервера (должен совпадать с тем, что в AuthManager)
 [System.Serializable]
-public class PlayerDataEntity
+public class PlayerDataResponse
 {
-    public string PlayerId;
-    public string PlayerName;
-    public int Units;
-    public int Food;
-    public int Wood;
-    public int Rock;
+    public int experience;
+    public int currency;
+    public int wins;
+    public int losses;
+    public List<int> purchasedItems;
+    public Dictionary<string, int> unitUpgrades;
 }

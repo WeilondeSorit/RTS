@@ -142,7 +142,7 @@ public class DataCollector : MonoBehaviour
         return "Unit";
     }
 }
-
+public class PlayerDataEntity { }
 // Классы для хранения данных
 [System.Serializable]
 public class GameState

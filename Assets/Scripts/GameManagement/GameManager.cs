@@ -67,7 +67,7 @@ public class GameManager : MonoBehaviour
 
         // Отправляем запрос на удаление данных с сервера
         if (playerData != null)
-            playerData.SendDeleteRequest();
+           // playerData.SendDeleteRequest();
 
         menu.SetActive(true);
         results.text = "You've lost";
@@ -82,7 +82,7 @@ public class GameManager : MonoBehaviour
 
         // Отправляем запрос на удаление данных с сервера
         if (playerData != null)
-            playerData.SendDeleteRequest();
+          //  playerData.SendDeleteRequest();
 
         menu.SetActive(true);
         results.text = "You've won";
@@ -120,7 +120,7 @@ public class GameManager : MonoBehaviour
     {
         if (playerData != null)
         {
-            playerData.SaveGame();
+           // playerData.SaveGame();
         }
     }
 
@@ -129,7 +129,7 @@ public class GameManager : MonoBehaviour
     {
         if (playerData != null)
         {
-            playerData.LoadGame();
+           // playerData.LoadGame();
         }
     }
 }
