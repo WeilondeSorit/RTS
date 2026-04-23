@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class PerlinMap : MonoBehaviour
 {
@@ -14,7 +15,6 @@ public class PerlinMap : MonoBehaviour
     public GameObject tree;
     public GameObject rock;
     public GameObject basePrefab;
-    public GameObject waterPrefab;  // Префаб воды с компонентом WaterAnimator
 
     [Header("Variation Settings")]
     public float minTreeScale = 0.8f;
@@ -27,42 +27,34 @@ public class PerlinMap : MonoBehaviour
     public float minIslandRadius = 8f;
     public float maxIslandRadius = 12f;
 
-    [Header("Sea Settings")]
-    [Tooltip("Ширина непроходимой морской границы по краям карты")]
-    public float seaBorderWidth = 8f;
-    [Tooltip("Количество проходов через море (2-4 рекомендуется)")]
-    [Range(1, 4)]
-    public int seaPassageCount = 3;
-    [Tooltip("Ширина каждого прохода в клетках")]
-    [Range(2, 8)]
-    public int passageWidth = 4;
-    [Tooltip("Множитель скорости анимации волн")]
-    public float waveSpeedMultiplier = 1f;
+
+
+    [Header("Placement Density")]
+    [Range(0f, 1f)]
+    public float treeDensity = 0.6f;
+    [Range(0f, 1f)]
+    public float rockDensity = 0.6f;
+
+    [Header("Spacing Settings")]
+    public float treeSpacingMultiplier = 1.5f;
+    public float rockSpacingMultiplier = 1.2f;
 
     private float[,] noiseMap;
     private bool[,] occupied;
     private Vector2Int playerBasePosition;
     private Vector2Int enemyBasePosition;
-    private List<Vector2> islandCenters = new List<Vector2>();
-    private List<GameObject> waterTiles = new List<GameObject>(); // Для управления анимацией
+    private readonly List<Vector2> islandCenters = new();
 
-    public UnityEngine.AI.NavMeshObstacle treeObstacle;
-    public UnityEngine.AI.NavMeshObstacle rockObstacle;
-    public UnityEngine.AI.NavMeshObstacle baseObstacle;
+    public NavMeshObstacle treeObstacle;
+    public NavMeshObstacle rockObstacle;
+    public NavMeshObstacle baseObstacle;
 
     void Update()
     {
-        treeObstacle.carving = true;
-        rockObstacle.carving = true;
-        baseObstacle.carving = true;
+        if (treeObstacle != null) treeObstacle.carving = true;
+        if (rockObstacle != null) rockObstacle.carving = true;
+        if (baseObstacle != null) baseObstacle.carving = true;
 
-        // Обновляем анимацию волн для всех водных плиток
-        float time = Time.time;
-        foreach (var water in waterTiles)
-        {
-            var animator = water?.GetComponent<WaterAnimator>();
-            animator?.AnimateWave(time);
-        }
     }
 
     void Awake()
@@ -72,245 +64,88 @@ public class PerlinMap : MonoBehaviour
         noiseMap = GenerateNoiseMap(width, height, scale, offsetX, offsetY);
         occupied = new bool[width, height];
 
-        GenerateSeaBorder();      // ← Сначала море с проходами
-        GenerateIslands();        // ← Потом острова внутри карты
-        PlaceBases();             // ← Базы в безопасных зонах
-        PlaceTree();              // ← Деревья на островах
-        PlaceRock();              // ← Камни на островах
-    }
 
-    // ============================================================
-    // 🌊 ГЕНЕРАЦИЯ МОРЯ И ВОЛН
-    // ============================================================
-
-    void GenerateSeaBorder()
-    {
-        waterTiles.Clear();
-
-        // 1. Помечаем края карты как море
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                bool isSeaBorder = x < seaBorderWidth || x >= width - seaBorderWidth ||
-                                  y < seaBorderWidth || y >= height - seaBorderWidth;
-
-                if (isSeaBorder)
-                {
-                    occupied[x, y] = true; // Непроходимо
-                    CreateWaterTile(x, y);
-                }
-            }
-        }
-
-    }
-
-    void CreateWaterTile(int x, int y)
-    {
-        if (waterPrefab != null)
-        {
-            Quaternion waterRotation = Quaternion.Euler(90f, 0f, 0f);
-            GameObject water = Instantiate(waterPrefab, new Vector3(x, 0.1f, y), waterRotation);
-            water.name = $"Water_{x}_{y}";
-
-            if (water.GetComponent<WaterAnimator>() == null)
-            {
-                water.AddComponent<WaterAnimator>();
-            }
-
-            var animator = water.GetComponent<WaterAnimator>();
-            animator.phaseOffset = Random.Range(0f, Mathf.PI * 2f);
-            animator.frequency = Random.Range(0.8f, 1.2f);
-            animator.amplitude = Random.Range(0.03f, 0.06f);
-            animator.speedMultiplier = waveSpeedMultiplier;
-
-            waterTiles.Add(water);
-        }
-        else
-        {
-            // Заглушка: создаём правильный Quad программно
-            GameObject water = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            water.name = $"WaterPlaceholder_{x}_{y}";
-
-            // 🔧 Правильная позиция и ориентация
-            water.transform.position = new Vector3(x, 0f, y);
-            water.transform.rotation = Quaternion.Euler(-90f, 0f, 0f); // ← Ключевое исправление!
-            water.transform.localScale = new Vector3(1f, 1f, 1f);
-
-            // Настройка материала для прозрачности
-            var renderer = water.GetComponent<Renderer>();
-            renderer.material.color = new Color(0.1f, 0.35f, 0.85f, 0.8f);
-            renderer.material.SetFloat("_Mode", 3);
-            renderer.material.EnableKeyword("_ALPHABLEND_ON");
-            renderer.material.renderQueue = 3000;
-
-            if (water.GetComponent<WaterAnimator>() == null)
-            {
-                water.AddComponent<WaterAnimator>();
-            }
-            var animator = water.GetComponent<WaterAnimator>();
-            animator.phaseOffset = Random.Range(0f, Mathf.PI * 2f);
-            animator.frequency = Random.Range(0.8f, 1.2f);
-            animator.amplitude = Random.Range(0.03f, 0.06f);
-            animator.speedMultiplier = waveSpeedMultiplier;
-
-            waterTiles.Add(water);
-        }
+        GenerateIslands();
+        PlaceBases();
+        PlaceTree();
+        PlaceRock();
     }
 
 
 
-    void RemoveWaterAt(int x, int y)
+
+
+
+    float[,] GenerateNoiseMap(int w, int h, float s, float ox, float oy)
     {
-        for (int i = waterTiles.Count - 1; i >= 0; i--)
-        {
-            Vector3 pos = waterTiles[i].transform.position;
-            if (Mathf.Approximately(pos.x, x) && Mathf.Approximately(pos.z, y))
+        float[,] map = new float[w, h];
+        for (int x = 0; x < w; x++)
+            for (int y = 0; y < h; y++)
             {
-                Destroy(waterTiles[i]);
-                waterTiles.RemoveAt(i);
-                break;
+                float sx = (x + ox) / s, sy = (y + oy) / s;
+                map[x, y] = Mathf.PerlinNoise(sx, sy) * 0.6f +
+                           Mathf.PerlinNoise(sx * 2f, sy * 2f) * 0.3f +
+                           Mathf.PerlinNoise(sx * 4f, sy * 4f) * 0.1f;
             }
-        }
-    }
-
-    void UpdateWaveAnimation()
-    {
-        float time = Time.time;
-
-        foreach (GameObject water in waterTiles)
-        {
-            var animator = water.GetComponent<WaterAnimator>();
-            if (animator != null && water != null)
-            {
-                // Сине-волновая анимация по высоте
-                float waveOffset = Mathf.Sin(time * 2f * animator.frequency * animator.speedMultiplier + animator.phaseOffset)
-                                 * animator.amplitude;
-
-                Vector3 pos = water.transform.position;
-                water.transform.position = new Vector3(pos.x, -0.3f + waveOffset, pos.z);
-
-                // Лёгкое покачивание по масштабу для эффекта "набухания"
-                float scaleWave = 1f + Mathf.Sin(time * 1.5f * animator.frequency + animator.phaseOffset) * 0.02f;
-                Vector3 originalScale = water.transform.localScale;
-                water.transform.localScale = new Vector3(originalScale.x, originalScale.y * 0.5f + waveOffset * 2f, originalScale.z);
-            }
-        }
-    }
-
-    // ============================================================
-    // 🗺️ ГЕНЕРАЦИЯ ШУМА И ОСТРОВОВ
-    // ============================================================
-
-    float[,] GenerateNoiseMap(int width, int height, float scale, float offsetX, float offsetY)
-    {
-        float[,] map = new float[width, height];
-
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                float sampleX = (x + offsetX) / scale;
-                float sampleY = (y + offsetY) / scale;
-
-                // Многооктавный шум для естественности
-                float noiseValue = Mathf.PerlinNoise(sampleX, sampleY) * 0.6f;
-                noiseValue += Mathf.PerlinNoise(sampleX * 2f, sampleY * 2f) * 0.3f;
-                noiseValue += Mathf.PerlinNoise(sampleX * 4f, sampleY * 4f) * 0.1f;
-
-                map[x, y] = noiseValue;
-            }
-        }
         return map;
     }
 
     void GenerateIslands()
     {
         islandCenters.Clear();
-
         for (int i = 0; i < islandCount; i++)
         {
-            // Острова только внутри "сухой" зоны карты
-            float posX = Random.Range(20f + seaBorderWidth, width - 20f - seaBorderWidth);
-            float posY = Random.Range(20f + seaBorderWidth, height - 20f - seaBorderWidth);
-            islandCenters.Add(new Vector2(posX, posY));
+            float px = Random.Range(20f , width - 20f);
+            float py = Random.Range(20f , height - 20f);
+            islandCenters.Add(new Vector2(px, py));
         }
     }
 
-    bool IsInAnyIsland(Vector2 position, out float islandInfluence)
+    bool IsInAnyIsland(Vector2 pos, out float influence)
     {
-        islandInfluence = 0f;
-
-        foreach (Vector2 center in islandCenters)
+        influence = 0f;
+        foreach (var center in islandCenters)
         {
-            float distance = Vector2.Distance(position, center);
-            float maxRadius = maxIslandRadius;
-            float influence = Mathf.Clamp01(1f - distance / maxRadius);
-            islandInfluence = Mathf.Max(islandInfluence, influence);
+            float dist = Vector2.Distance(pos, center);
+            influence = Mathf.Max(influence, Mathf.Clamp01(1f - dist / maxIslandRadius));
         }
-
-        return islandInfluence > 0.1f;
+        return influence > 0.1f;
     }
-
-    // ============================================================
-    // 🏠 РАЗМЕЩЕНИЕ БАЗ
-    // ============================================================
 
     public void PlaceBases()
     {
         playerBasePosition = FindSuitableBasePosition(15f);
         enemyBasePosition = FindSuitableBasePosition(15f);
-
         while (Vector2.Distance(playerBasePosition, enemyBasePosition) < 50f)
-        {
             enemyBasePosition = FindSuitableBasePosition(15f);
-        }
 
-        GameObject playerBase = Instantiate(basePrefab, new Vector3(playerBasePosition.x, 0, playerBasePosition.y), Quaternion.identity);
-        playerBase.tag = "PlayerBase";
-
-        GameObject enemyBase = Instantiate(basePrefab, new Vector3(enemyBasePosition.x, 0, enemyBasePosition.y), Quaternion.identity);
-        enemyBase.tag = "EnemyBase";
+        var pBase = Instantiate(basePrefab, new Vector3(playerBasePosition.x, 0, playerBasePosition.y), Quaternion.identity);
+        pBase.tag = "Base";
+        var eBase = Instantiate(basePrefab, new Vector3(enemyBasePosition.x, 0, enemyBasePosition.y), Quaternion.identity);
+        eBase.tag = "EnemyBase";
 
         ClearArea(playerBasePosition, 7);
         ClearArea(enemyBasePosition, 7);
     }
 
-    Vector2Int FindSuitableBasePosition(float minDistanceFromIslands)
+    Vector2Int FindSuitableBasePosition(float minDist)
     {
-        int attempts = 0;
-        int safeMargin = Mathf.CeilToInt(seaBorderWidth) + 5;
-
+        int attempts = 0, margin =  5;
         while (attempts < 150)
         {
-            Vector2Int candidate = new Vector2Int(
-                Random.Range(safeMargin, width - safeMargin),
-                Random.Range(safeMargin, height - safeMargin)
+            var cand = new Vector2Int(
+                Random.Range(margin, width - margin),
+                Random.Range(margin, height - margin)
             );
+            bool tooClose = false;
+            foreach (var c in islandCenters)
+                if (Vector2.Distance(cand, c) < minDist) { tooClose = true; break; }
 
-            bool tooCloseToIsland = false;
-            foreach (Vector2 center in islandCenters)
-            {
-                if (Vector2.Distance(candidate, center) < minDistanceFromIslands)
-                {
-                    tooCloseToIsland = true;
-                    break;
-                }
-            }
-
-            if (!tooCloseToIsland && !occupied[candidate.x, candidate.y])
-            {
-                return candidate;
-            }
+            if (!tooClose && !occupied[cand.x, cand.y]) return cand;
             attempts++;
         }
-
-        return new Vector2Int(safeMargin, safeMargin);
+        return new Vector2Int(margin, margin);
     }
-
-    // ============================================================
-    // 🌳 РАЗМЕЩЕНИЕ ОБЪЕКТОВ
-    // ============================================================
 
     public void PlaceTree()
     {
@@ -319,27 +154,23 @@ public class PerlinMap : MonoBehaviour
             for (int y = 0; y < height; y++)
             {
                 if (occupied[x, y]) continue;
-
-                float islandInfluence;
-                bool inIsland = IsInAnyIsland(new Vector2(x, y), out islandInfluence);
-
-                if (inIsland)
+                if (IsInAnyIsland(new Vector2(x, y), out float inf) &&
+                    noiseMap[x, y] > 0.4f + (1f - inf) * 0.3f &&
+                    noiseMap[x, y] < 0.8f &&
+                    HasPathAround(x, y, 2) &&
+                    Random.value <= treeDensity)
                 {
-                    float adaptiveThreshold = 0.4f + (1f - islandInfluence) * 0.3f;
+                    var treeObj = Instantiate(tree, new Vector3(x, 0, y), Quaternion.identity);
+                    float s = Random.Range(minTreeScale, maxTreeScale);
+                    treeObj.transform.localScale *= s;
+                    treeObj.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
 
-                    if (noiseMap[x, y] > adaptiveThreshold &&
-                        noiseMap[x, y] < 0.8f &&
-                        !occupied[x, y] &&
-                        HasPathAround(x, y, 2))
-                    {
-                        GameObject newTree = Instantiate(tree, new Vector3(x, 0, y), Quaternion.identity);
-                        float randomScale = Random.Range(minTreeScale, maxTreeScale);
-                        newTree.transform.localScale *= randomScale;
-                        newTree.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+                    var obs = treeObj.AddComponent<NavMeshObstacle>();
+                    obs.carving = true;
+                    treeObj.tag = "Tree";
 
-                        occupied[x, y] = true;
-                        MarkAreaOccupied(x, y, Mathf.CeilToInt(randomScale * 0.8f));
-                    }
+                    occupied[x, y] = true;
+                    MarkAreaOccupied(x, y, Mathf.CeilToInt(s * treeSpacingMultiplier), true);
                 }
             }
         }
@@ -352,98 +183,73 @@ public class PerlinMap : MonoBehaviour
             for (int y = 0; y < height; y++)
             {
                 if (occupied[x, y]) continue;
-
-                float islandInfluence;
-                bool inIsland = IsInAnyIsland(new Vector2(x, y), out islandInfluence);
-
-                if (inIsland)
+                if (IsInAnyIsland(new Vector2(x, y), out float inf) &&
+                    noiseMap[x, y] > 0.3f + (1f - inf) * 0.2f &&
+                    noiseMap[x, y] < 0.7f &&
+                    HasPathAround(x, y, 2) &&
+                    Random.value <= rockDensity)
                 {
-                    float adaptiveThreshold = 0.3f + (1f - islandInfluence) * 0.2f;
+                    var rockObj = Instantiate(rock, new Vector3(x, 0, y), Quaternion.identity);
+                    float s = Random.Range(minRockScale, maxRockScale);
+                    rockObj.transform.localScale *= s;
+                    rockObj.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+                    rockObj.transform.Rotate(Random.Range(-5f, 5f), 0f, Random.Range(-5f, 5f));
 
-                    if (noiseMap[x, y] > adaptiveThreshold &&
-                        noiseMap[x, y] < 0.7f &&
-                        !occupied[x, y] &&
-                        HasPathAround(x, y, 2))
-                    {
-                        GameObject newRock = Instantiate(rock, new Vector3(x, 0, y), Quaternion.identity);
-                        float randomScale = Random.Range(minRockScale, maxRockScale);
-                        newRock.transform.localScale *= randomScale;
-                        newRock.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-                        newRock.transform.Rotate(Random.Range(-5f, 5f), 0f, Random.Range(-5f, 5f));
+                    var obs = rockObj.AddComponent<NavMeshObstacle>();
+                    obs.carving = true;
+                    rockObj.tag = "Rock";
 
-                        occupied[x, y] = true;
-                        MarkAreaOccupied(x, y, Mathf.CeilToInt(randomScale * 0.6f));
-                    }
+                    occupied[x, y] = true;
+                    MarkAreaOccupied(x, y, Mathf.CeilToInt(s * rockSpacingMultiplier), true);
                 }
             }
         }
     }
 
-    // ============================================================
-    // 🔍 ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
-    // ============================================================
-
-    bool HasPathAround(int centerX, int centerY, int checkRadius)
+    bool HasPathAround(int cx, int cy, int r)
     {
-        int freeSpaces = 0;
-        int totalSpaces = 0;
-
-        for (int x = -checkRadius; x <= checkRadius; x++)
-        {
-            for (int y = -checkRadius; y <= checkRadius; y++)
+        int free = 0, total = 0;
+        for (int x = -r; x <= r; x++)
+            for (int y = -r; y <= r; y++)
             {
-                int checkX = centerX + x;
-                int checkY = centerY + y;
-
-                if (checkX >= 0 && checkX < width && checkY >= 0 && checkY < height)
+                int nx = cx + x, ny = cy + y;
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height)
                 {
-                    totalSpaces++;
-                    if (!occupied[checkX, checkY]) freeSpaces++;
+                    total++;
+                    if (!occupied[nx, ny]) free++;
                 }
             }
-        }
-
-        return freeSpaces >= totalSpaces / 2;
+        return free >= total / 2;
     }
 
-    private void MarkAreaOccupied(int centerX, int centerY, int radius)
+    void MarkAreaOccupied(int cx, int cy, int radius, bool hard)
     {
         for (int x = -radius; x <= radius; x++)
-        {
             for (int y = -radius; y <= radius; y++)
             {
-                int checkX = centerX + x;
-                int checkY = centerY + y;
-
-                if (checkX >= 0 && checkX < width && checkY >= 0 && checkY < height)
+                int nx = cx + x, ny = cy + y;
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height)
                 {
-                    float distance = Mathf.Sqrt(x * x + y * y);
-                    if (distance <= radius * 0.5f || Random.Range(0f, 1f) > 0.7f)
-                    {
-                        occupied[checkX, checkY] = true;
-                    }
+                    float d = Mathf.Sqrt(x * x + y * y);
+                    if (hard ? d <= radius : (d <= radius * 0.5f || Random.value > 0.7f))
+                        occupied[nx, ny] = true;
                 }
             }
-        }
     }
 
-    public void ClearArea(Vector2Int basePosition, int radius)
+    public void ClearArea(Vector2Int pos, int radius)
     {
         for (int x = -radius; x <= radius; x++)
-        {
             for (int y = -radius; y <= radius; y++)
             {
-                int checkX = basePosition.x + x;
-                int checkY = basePosition.y + y;
-
-                if (checkX >= 0 && checkX < width && checkY >= 0 && checkY < height)
+                int cx = pos.x + x, cy = pos.y + y;
+                if (cx >= 0 && cx < width && cy >= 0 && cy < height)
                 {
-                    noiseMap[checkX, checkY] = 0f;
-                    occupied[checkX, checkY] = true;
-                    RemoveWaterAt(checkX, checkY);
+                    noiseMap[cx, cy] = 0f;
+                    occupied[cx, cy] = true;
+                   
                 }
             }
-        }
     }
 
     public Vector2Int GetPlayerBasePosition() => playerBasePosition;

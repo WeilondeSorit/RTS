@@ -13,6 +13,7 @@ public class AuthManager : MonoBehaviour
 {
     [Header("Login Panel")]
     public GameObject loginPanel;
+    public GameObject allButtons;
     public TMP_InputField loginUsernameInput;
     public TMP_InputField loginPasswordInput;
     public Button loginButton;
@@ -48,6 +49,7 @@ public class AuthManager : MonoBehaviour
 
         loginPanel.SetActive(true);
         registerPanel.SetActive(false);
+        allButtons.SetActive(false);
 
         if (PlayerPrefs.HasKey("PlayerId"))
         {
@@ -127,7 +129,7 @@ public class AuthManager : MonoBehaviour
 
             Debug.Log($"Успешный вход. PlayerId: {playerId}");
             ShowLoginStatus("✅ Вход выполнен!");
-
+            allButtons.SetActive(true);
             StartCoroutine(GetPlayerDataAndLoad(playerId));
         }
         else
@@ -204,12 +206,6 @@ public class AuthManager : MonoBehaviour
         }
     }
 
-    private IEnumerator DelayedSceneLoad(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        SimpleLoadingManager.LoadSceneWithLoading(gameSceneName);
-    }
-
     public void OnLogoutClicked()
     {
         if (PlayerPrefs.HasKey("PlayerId"))
@@ -241,6 +237,7 @@ public class AuthManager : MonoBehaviour
         StopAllCoroutines();
 
         Debug.Log("Пользователь вышел из аккаунта");
+        allButtons.SetActive(false);
     }
 
     /// <summary>
@@ -289,6 +286,7 @@ public class AuthManager : MonoBehaviour
     private void SwitchToRegisterPanel()
     {
         loginPanel.SetActive(false);
+        allButtons.SetActive(false);
         registerPanel.SetActive(true);
         loginStatusText.text = "";
     }
@@ -296,6 +294,7 @@ public class AuthManager : MonoBehaviour
     private void SwitchToLoginPanel()
     {
         registerPanel.SetActive(false);
+        allButtons.SetActive(false);
         loginPanel.SetActive(true);
         registerStatusText.text = "";
     }
