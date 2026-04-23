@@ -95,17 +95,17 @@ public class CameraController : MonoBehaviour
             if (accountForRotation && mapObject.rotation != Quaternion.identity)
             {
                 var localBounds = GetLocalBounds(mapObject);
-                autoMinX = mapObject.position.x + localBounds.min.x - padding;
-                autoMaxX = mapObject.position.x + localBounds.max.x + padding;
-                autoMinZ = mapObject.position.z + localBounds.min.z - padding;
-                autoMaxZ = mapObject.position.z + localBounds.max.z + padding;
+                autoMinX = mapObject.position.x +5 + localBounds.min.x - padding;
+                autoMaxX = mapObject.position.x -5 + localBounds.max.x + padding;
+                autoMinZ = mapObject.position.z + 15 + localBounds.min.z - padding;
+                autoMaxZ = mapObject.position.z + 15 + localBounds.max.z + padding;
             }
             else
             {
-                autoMinX = bounds.Value.min.x + padding;
-                autoMaxX = bounds.Value.max.x - padding;
-                autoMinZ = bounds.Value.min.z + padding;
-                autoMaxZ = bounds.Value.max.z - padding;
+                autoMinX = bounds.Value.min.x + 5 + padding;
+                autoMaxX = bounds.Value.max.x -5 - padding;
+                autoMinZ = bounds.Value.min.z +15 + padding;
+                autoMaxZ = bounds.Value.max.z +15 - padding;
             }
             hasAutoBounds = true;
         }

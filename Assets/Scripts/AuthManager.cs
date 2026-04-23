@@ -5,7 +5,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.Networking;
-using Newtonsoft.Json;  // установите Newtonsoft.Json через Package Manager (или используйте UnityJson, но с атрибутами)
+using Newtonsoft.Json;
+using System.Security.Cryptography;
+using System.Text;
 
 public class AuthManager : MonoBehaviour
 {
@@ -25,6 +27,9 @@ public class AuthManager : MonoBehaviour
     public Button switchToLoginButton;
     public TMP_Text registerStatusText;
 
+    [Header("Logout")]
+    public Button logoutButton;
+
     [Header("Scene Management")]
     [SerializeField] private string gameSceneName = "GameScene";
 
@@ -38,15 +43,16 @@ public class AuthManager : MonoBehaviour
         switchToRegisterButton.onClick.AddListener(SwitchToRegisterPanel);
         switchToLoginButton.onClick.AddListener(SwitchToLoginPanel);
 
+        if (logoutButton != null)
+            logoutButton.onClick.AddListener(OnLogoutClicked);
+
         loginPanel.SetActive(true);
         registerPanel.SetActive(false);
 
-        // Проверка сохранённой сессии (если храните токен или ID)
         if (PlayerPrefs.HasKey("PlayerId"))
         {
             string playerId = PlayerPrefs.GetString("PlayerId");
             Debug.Log($"Найден сохранённый игрок: {playerId}");
-            // Можно автоматически загрузить данные игрока и перейти в игру
             StartCoroutine(GetPlayerDataAndLoad(playerId));
         }
     }
@@ -97,9 +103,12 @@ public class AuthManager : MonoBehaviour
         loginStatusText.text = "Подключение...";
         loginStatusText.color = Color.white;
 
-        var jsonBody = JsonConvert.SerializeObject(new { login, password });
+        // Хешируем пароль перед отправкой
+        string hashedPassword = HashPassword(password);
+        var jsonBody = JsonConvert.SerializeObject(new { login, password = hashedPassword });
+
         using var request = UnityWebRequest.PostWwwForm($"{mainServerUrl}/auth/login", "POST");
-        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("Content-Type", "application/json");
@@ -113,14 +122,12 @@ public class AuthManager : MonoBehaviour
             var response = JsonConvert.DeserializeObject<LoginResponse>(request.downloadHandler.text);
             string playerId = response.id;
 
-            // Сохраняем ID игрока (можно также использовать токен)
             PlayerPrefs.SetString("PlayerId", playerId);
             PlayerPrefs.Save();
 
             Debug.Log($"Успешный вход. PlayerId: {playerId}");
             ShowLoginStatus("✅ Вход выполнен!");
 
-            // Загружаем данные игрока
             StartCoroutine(GetPlayerDataAndLoad(playerId));
         }
         else
@@ -136,9 +143,12 @@ public class AuthManager : MonoBehaviour
         registerStatusText.text = "Регистрация...";
         registerStatusText.color = Color.white;
 
-        var jsonBody = JsonConvert.SerializeObject(new { login, password });
+        // Хешируем пароль перед отправкой
+        string hashedPassword = HashPassword(password);
+        var jsonBody = JsonConvert.SerializeObject(new { login, password = hashedPassword });
+
         using var request = UnityWebRequest.PostWwwForm($"{mainServerUrl}/auth/register", "POST");
-        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("Content-Type", "application/json");
@@ -154,7 +164,7 @@ public class AuthManager : MonoBehaviour
             ShowRegisterStatus("✅ Регистрация успешна! Вход...");
             Debug.Log($"Registered new player: {playerId}");
 
-            // Автоматически логинимся
+            // Автоматический вход (пароль уже будет захэширован внутри LoginRequest)
             StartCoroutine(LoginRequest(login, password));
         }
         else
@@ -177,16 +187,15 @@ public class AuthManager : MonoBehaviour
             var playerData = JsonConvert.DeserializeObject<PlayerDataResponse>(request.downloadHandler.text);
             if (PlayerData.Instance != null)
             {
-                PlayerData.Instance.SetAuthToken("", playerId, loginUsernameInput.text); // токен не используем, только id
+                PlayerData.Instance.SetAuthToken("", playerId, loginUsernameInput.text);
                 PlayerData.Instance.experience = playerData.experience;
                 PlayerData.Instance.currency = playerData.currency;
                 PlayerData.Instance.wins = playerData.wins;
                 PlayerData.Instance.losses = playerData.losses;
-                // Если нужно распарсить купленные предметы и улучшения - сделайте отдельно
             }
-
-            ShowLoginStatus("Загрузка игры...");
-            StartCoroutine(DelayedSceneLoad(1f));
+            ShowLoginStatus("Вход успешный!");
+            loginPanel.SetActive(false);
+            // StartCoroutine(DelayedSceneLoad(1f));
         }
         else
         {
@@ -199,6 +208,58 @@ public class AuthManager : MonoBehaviour
     {
         yield return new WaitForSeconds(delay);
         SimpleLoadingManager.LoadSceneWithLoading(gameSceneName);
+    }
+
+    public void OnLogoutClicked()
+    {
+        if (PlayerPrefs.HasKey("PlayerId"))
+        {
+            PlayerPrefs.DeleteKey("PlayerId");
+            PlayerPrefs.Save();
+            Debug.Log("PlayerPrefs очищен");
+        }
+
+        if (PlayerData.Instance != null)
+        {
+            PlayerData.Instance.experience = 0;
+            PlayerData.Instance.currency = 0;
+            PlayerData.Instance.wins = 0;
+            PlayerData.Instance.losses = 0;
+            PlayerData.Instance.SetAuthToken("", "", "");
+        }
+
+        loginUsernameInput.text = "";
+        loginPasswordInput.text = "";
+        registerUsernameInput.text = "";
+        registerPasswordInput.text = "";
+        loginStatusText.text = "";
+        registerStatusText.text = "";
+
+        loginPanel.SetActive(true);
+        registerPanel.SetActive(false);
+
+        StopAllCoroutines();
+
+        Debug.Log("Пользователь вышел из аккаунта");
+    }
+
+    /// <summary>
+    /// Хеширование пароля алгоритмом SHA256.
+    /// </summary>
+    private string HashPassword(string password)
+    {
+        using (SHA256 sha256 = SHA256.Create())
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(password);
+            byte[] hashBytes = sha256.ComputeHash(bytes);
+            // Преобразуем в hex-строку
+            StringBuilder sb = new StringBuilder();
+            foreach (byte b in hashBytes)
+            {
+                sb.Append(b.ToString("x2"));
+            }
+            return sb.ToString();
+        }
     }
 
     private void ShowLoginStatus(string message)
@@ -239,7 +300,6 @@ public class AuthManager : MonoBehaviour
         registerStatusText.text = "";
     }
 
-    // Вспомогательные классы для десериализации JSON
     [Serializable]
     private class LoginResponse
     {
