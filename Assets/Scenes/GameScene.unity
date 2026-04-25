@@ -4692,13 +4692,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 28b6e6541d3ec4240829c9e932e1ae35, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  randomSeason: 1
+  selectedSeason: 0
+  seasonData:
+  - treePrefab: {fileID: 919132149155446097, guid: d02e6d8276e4f8a43be8f28f90a94ea3, type: 3}
+    rockPrefab: {fileID: 919132149155446097, guid: edf77e8b9d07f6c45a29a50707dba865, type: 3}
+    groundMaterial: {fileID: 8457432598939410078, guid: f3a307d712af9484a9cdc568383bf59c, type: 3}
+  - treePrefab: {fileID: 919132149155446097, guid: 2f6067315e8abab4bb2b333d0f7aca57, type: 3}
+    rockPrefab: {fileID: 919132149155446097, guid: edf77e8b9d07f6c45a29a50707dba865, type: 3}
+    groundMaterial: {fileID: 2100000, guid: 2f31f4440de60444b8dd94d4d64b3c00, type: 2}
+  - treePrefab: {fileID: 919132149155446097, guid: 76e43a4bed587f54fb465ee3892f39e5, type: 3}
+    rockPrefab: {fileID: 919132149155446097, guid: edf77e8b9d07f6c45a29a50707dba865, type: 3}
+    groundMaterial: {fileID: 2100000, guid: 01a7bc73373864398befa5c72ebb094c, type: 2}
+  - treePrefab: {fileID: 919132149155446097, guid: 8a994a5667188b548a0a069e554e873e, type: 3}
+    rockPrefab: {fileID: 919132149155446097, guid: edf77e8b9d07f6c45a29a50707dba865, type: 3}
+    groundMaterial: {fileID: -3963241562183589234, guid: 62bd9351bc589024fa75bc9eb4f00813, type: 3}
   width: 100
   height: 100
   scale: 20
   offsetX: 0
   offsetY: 0
-  tree: {fileID: 919132149155446097, guid: 2f6067315e8abab4bb2b333d0f7aca57, type: 3}
-  rock: {fileID: 919132149155446097, guid: edf77e8b9d07f6c45a29a50707dba865, type: 3}
+  baseEdgeMargin: 10
+  groundRenderer: {fileID: 0}
   basePrefab: {fileID: 1131050632274006739, guid: 866e610fc65621b4aa0bcccd07ee493f, type: 3}
   minTreeScale: 0.5
   maxTreeScale: 1.5
@@ -5601,6 +5616,103 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1087414989}
   m_CullTransparentMesh: 1
+--- !u!1 &1117482276
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1117482278}
+  - component: {fileID: 1117482277}
+  m_Layer: 0
+  m_Name: Directional Light
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!108 &1117482277
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1117482276}
+  m_Enabled: 1
+  serializedVersion: 13
+  m_Type: 1
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Intensity: 1
+  m_Range: 10
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize2D: {x: 0.5, y: 0.5}
+  m_Shadows:
+    m_Type: 0
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 4
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 0
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ForceVisible: 0
+  m_ShapeRadius: 0.025
+  m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
+--- !u!4 &1117482278
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1117482276}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.38302222, y: -0.38302222, z: 0.17860618, w: 0.82139385}
+  m_LocalPosition: {x: 0.8, y: -34.2, z: 100.3}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 50, y: -50, z: 0}
 --- !u!114 &1191687615 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7771721620457635401, guid: a92ef8643facd07458d54c303df56e4e, type: 3}
@@ -5839,6 +5951,7 @@ MonoBehaviour:
   food: 0
   wood: 0
   rock: 0
+  foodConsumptionPerUnitPerSecond: 1
   unitsText: {fileID: 79579225}
   foodText: {fileID: 539956107}
   woodText: {fileID: 877072281}
@@ -7580,6 +7693,7 @@ GameObject:
   - component: {fileID: 1574390428}
   - component: {fileID: 1574390429}
   - component: {fileID: 1574390430}
+  - component: {fileID: 1574390431}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -7872,6 +7986,31 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &1574390431
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1574390422}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14ed7f235236b8d41b709ebc704bf5c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FogOfWarManager
+  mapWidth: 100
+  mapHeight: 100
+  originX: 0
+  originZ: 0
+  cellSize: 5
+  visionRadius: 8
+  fogPlanePrefab: {fileID: 381033628017309728, guid: 07f533462a511ec4a9e779e3327bb30e, type: 3}
+  unitTags:
+  - Villager
+  - Archer
+  baseTag: Base
+  updateInterval: 0.5
+  debugLog: 1
 --- !u!1 &1640744325
 GameObject:
   m_ObjectHideFlags: 0
@@ -9816,24 +9955,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 928b5f1e4cd86ad429e9b780d7df6855, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  supabaseUrl: https://ceqdjafzolfhtqjjlvwg.supabase.co/rest/v1/
-  supabaseKey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlcWRqYWZ6b2xmaHRxampsdndnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNTAyMzQsImV4cCI6MjA3NTgyNjIzNH0.N_RQNgbW0jx7mlyUI67sQMaZp38xqMzFR6fJjNN4338
-  outputText: {fileID: 484252828}
-  testAttackTriggerBtn: {fileID: 342240632}
-  testHealingTriggerBtn: {fileID: 20614045}
-  testConstructionTriggerBtn: {fileID: 1253611265}
-  testTimestampTriggerBtn: {fileID: 1701415366}
-  testGetPlayerStatsBtn: {fileID: 1771388929}
-  testHealAllUnitsBtn: {fileID: 892918387}
-  testCollectResourcesBtn: {fileID: 381198001}
-  testCreatePlayerBtn: {fileID: 1207761197}
-  testCreateTestDataBtn: {fileID: 900279649}
-  clearOutputBtn: {fileID: 1336325214}
-  testPlayerId: 1
-  testAttackerId: 4
-  testTargetId: 1
-  testDamage: 20
-  testHealAmount: 15
 --- !u!1 &2059116918
 GameObject:
   m_ObjectHideFlags: 0
@@ -10828,3 +10949,4 @@ SceneRoots:
   - {fileID: 879385274}
   - {fileID: 1860086641}
   - {fileID: 1336482968}
+  - {fileID: 1117482278}

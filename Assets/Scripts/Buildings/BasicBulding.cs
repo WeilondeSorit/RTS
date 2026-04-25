@@ -8,28 +8,31 @@ public class BasicBulding : Health
     [SerializeField] private Health healthComponent;
     [SerializeField] private int baseHealth = 500;
 
-    void Start()
+    protected virtual void Start()
     {
         if (healthComponent == null)
             healthComponent = GetComponent<Health>();
-        
+
         healthComponent.health = baseHealth;
     }
 
     public void DamageBuilding(int damage)
     {
         healthComponent.TakeDamage(damage);
-
-        // Дополнительная логика для здания
         if (healthComponent.health <= 0)
         {
             HandleBuildingDestruction();
         }
     }
 
-    private void HandleBuildingDestruction()
+    protected virtual void HandleBuildingDestruction()
     {
-        // Логика уничтожения здания
+        // Уничтожение объекта
         Destroy(gameObject);
+    }
+
+    protected virtual void OnDestroy()
+    {
+        // Будет переопределено в жилых зданиях для дерегистрации
     }
 }

@@ -5,15 +5,42 @@ using UnityEngine.AI;
 
 public class PerlinMap : MonoBehaviour
 {
+    // ---------- НОВЫЙ БЛОК: ВРЕМЕНА ГОДА ----------
+    public enum Season
+    {
+        Spring,
+        Summer,
+        Autumn,
+        Winter
+    }
+
+    [System.Serializable]
+    public class SeasonData
+    {
+        public GameObject treePrefab;
+        public GameObject rockPrefab;
+        public Material groundMaterial;
+    }
+
+    [Header("Season Settings")]
+    public bool randomSeason = true;
+    public Season selectedSeason;
+    public SeasonData[] seasonData = new SeasonData[4];
+
+    private Season currentSeason;
+    private GameObject currentTreePrefab;
+    private GameObject currentRockPrefab;
+
     [Header("Map Settings")]
     public int width = 100;
     public int height = 100;
     public float scale = 20f;
     public float offsetX, offsetY;
 
-    [Header("Objects")]
-    public GameObject tree;
-    public GameObject rock;
+    [Header("Base Placement")]
+    public int baseEdgeMargin = 10;      // Минимальное расстояние от края карты для баз
+
+    public MeshRenderer groundRenderer;
     public GameObject basePrefab;
 
     [Header("Variation Settings")]
@@ -27,8 +54,6 @@ public class PerlinMap : MonoBehaviour
     public float minIslandRadius = 8f;
     public float maxIslandRadius = 12f;
 
-
-
     [Header("Placement Density")]
     [Range(0f, 1f)]
     public float treeDensity = 0.6f;
@@ -39,31 +64,24 @@ public class PerlinMap : MonoBehaviour
     public float treeSpacingMultiplier = 1.5f;
     public float rockSpacingMultiplier = 1.2f;
 
+    public NavMeshObstacle treeObstacle;
+    public NavMeshObstacle rockObstacle;
+    public NavMeshObstacle baseObstacle;
+
     private float[,] noiseMap;
     private bool[,] occupied;
     private Vector2Int playerBasePosition;
     private Vector2Int enemyBasePosition;
     private readonly List<Vector2> islandCenters = new();
 
-    public NavMeshObstacle treeObstacle;
-    public NavMeshObstacle rockObstacle;
-    public NavMeshObstacle baseObstacle;
-
-    void Update()
-    {
-        if (treeObstacle != null) treeObstacle.carving = true;
-        if (rockObstacle != null) rockObstacle.carving = true;
-        if (baseObstacle != null) baseObstacle.carving = true;
-
-    }
-
     void Awake()
     {
+        ApplyRandomSeason();
+
         offsetX = Random.Range(0f, 10000f);
         offsetY = Random.Range(0f, 10000f);
         noiseMap = GenerateNoiseMap(width, height, scale, offsetX, offsetY);
         occupied = new bool[width, height];
-
 
         GenerateIslands();
         PlaceBases();
@@ -71,10 +89,44 @@ public class PerlinMap : MonoBehaviour
         PlaceRock();
     }
 
+    void Update()
+    {
+        if (treeObstacle != null) treeObstacle.carving = true;
+        if (rockObstacle != null) rockObstacle.carving = true;
+        if (baseObstacle != null) baseObstacle.carving = true;
+    }
 
+    private void ApplyRandomSeason()
+    {
+        if (randomSeason)
+        {
+            int seasonIndex = Random.Range(0, 4);
+            currentSeason = (Season)seasonIndex;
+        }
+        else
+        {
+            currentSeason = selectedSeason;
+        }
 
+        int idx = (int)currentSeason;
+        if (seasonData == null || idx >= seasonData.Length || seasonData[idx] == null)
+        {
+            Debug.LogError($"Нет данных для сезона {currentSeason}! Проверьте настройки SeasonData в инспекторе.");
+            return;
+        }
 
+        SeasonData data = seasonData[idx];
+        currentTreePrefab = data.treePrefab;
+        currentRockPrefab = data.rockPrefab;
 
+        if (groundRenderer == null)
+            groundRenderer = GetComponent<MeshRenderer>();
+
+        if (groundRenderer != null && data.groundMaterial != null)
+            groundRenderer.material = data.groundMaterial;
+        else
+            Debug.LogWarning("Не удалось назначить материал земли: отсутствует MeshRenderer или материал в данных сезона.");
+    }
 
     float[,] GenerateNoiseMap(int w, int h, float s, float ox, float oy)
     {
@@ -93,10 +145,11 @@ public class PerlinMap : MonoBehaviour
     void GenerateIslands()
     {
         islandCenters.Clear();
+        // Острова тоже не будут генерироваться слишком близко к краю (отступ 20 уже есть)
         for (int i = 0; i < islandCount; i++)
         {
-            float px = Random.Range(20f , width - 20f);
-            float py = Random.Range(20f , height - 20f);
+            float px = Random.Range(20f, width - 20f);
+            float py = Random.Range(20f, height - 20f);
             islandCenters.Add(new Vector2(px, py));
         }
     }
@@ -116,7 +169,7 @@ public class PerlinMap : MonoBehaviour
     {
         playerBasePosition = FindSuitableBasePosition(15f);
         enemyBasePosition = FindSuitableBasePosition(15f);
-        while (Vector2.Distance(playerBasePosition, enemyBasePosition) < 50f)
+        while (Vector2.Distance(playerBasePosition, enemyBasePosition) < 70f)
             enemyBasePosition = FindSuitableBasePosition(15f);
 
         var pBase = Instantiate(basePrefab, new Vector3(playerBasePosition.x, 0, playerBasePosition.y), Quaternion.identity);
@@ -130,12 +183,13 @@ public class PerlinMap : MonoBehaviour
 
     Vector2Int FindSuitableBasePosition(float minDist)
     {
-        int attempts = 0, margin =  5;
-        while (attempts < 150)
+        int attempts = 0;
+        // Увеличил максимальное количество попыток, так как отступ увеличен
+        while (attempts < 200)
         {
             var cand = new Vector2Int(
-                Random.Range(margin, width - margin),
-                Random.Range(margin, height - margin)
+                Random.Range(baseEdgeMargin, width - baseEdgeMargin),
+                Random.Range(baseEdgeMargin, height - baseEdgeMargin)
             );
             bool tooClose = false;
             foreach (var c in islandCenters)
@@ -144,11 +198,13 @@ public class PerlinMap : MonoBehaviour
             if (!tooClose && !occupied[cand.x, cand.y]) return cand;
             attempts++;
         }
-        return new Vector2Int(margin, margin);
+        // fallback – центр карты (если ничего не нашли)
+        return new Vector2Int(width / 2, height / 2);
     }
 
     public void PlaceTree()
     {
+        if (currentTreePrefab == null) return;
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -160,7 +216,7 @@ public class PerlinMap : MonoBehaviour
                     HasPathAround(x, y, 2) &&
                     Random.value <= treeDensity)
                 {
-                    var treeObj = Instantiate(tree, new Vector3(x, 0, y), Quaternion.identity);
+                    var treeObj = Instantiate(currentTreePrefab, new Vector3(x, 0, y), Quaternion.identity);
                     float s = Random.Range(minTreeScale, maxTreeScale);
                     treeObj.transform.localScale *= s;
                     treeObj.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
@@ -178,6 +234,7 @@ public class PerlinMap : MonoBehaviour
 
     public void PlaceRock()
     {
+        if (currentRockPrefab == null) return;
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -189,7 +246,7 @@ public class PerlinMap : MonoBehaviour
                     HasPathAround(x, y, 2) &&
                     Random.value <= rockDensity)
                 {
-                    var rockObj = Instantiate(rock, new Vector3(x, 0, y), Quaternion.identity);
+                    var rockObj = Instantiate(currentRockPrefab, new Vector3(x, 0, y), Quaternion.identity);
                     float s = Random.Range(minRockScale, maxRockScale);
                     rockObj.transform.localScale *= s;
                     rockObj.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
@@ -247,7 +304,6 @@ public class PerlinMap : MonoBehaviour
                 {
                     noiseMap[cx, cy] = 0f;
                     occupied[cx, cy] = true;
-                   
                 }
             }
     }

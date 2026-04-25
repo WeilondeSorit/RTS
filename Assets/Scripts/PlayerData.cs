@@ -20,10 +20,15 @@ public class PlayerData : MonoBehaviour
     public Dictionary<string, int> unitUpgrades = new Dictionary<string, int>();
 
     // ===== ЛОКАЛЬНЫЕ РЕСУРСЫ ДЛЯ ТЕКУЩЕЙ СЕССИИ =====
-    public int units;
+    [Header("Resources")]
+    public int units;       // текущее количество юнитов
     public int food = 500;
     public int wood = 300;
     public int rock = 200;
+
+    [Header("Unit Consumption")]
+    [SerializeField] private float foodConsumptionPerUnitPerSecond = 1f; // расход еды на юнита в секунду
+    private Coroutine consumptionCoroutine;
 
     // ===== UI =====
     public TextMeshProUGUI unitsText;
@@ -65,6 +70,10 @@ public class PlayerData : MonoBehaviour
             LoadSession();
             LoadPlayerData();
             isInitialized = true;
+
+            // Запускаем постоянное потребление еды
+            if (consumptionCoroutine == null)
+                consumptionCoroutine = StartCoroutine(FoodConsumptionRoutine());
         }
         else
         {
@@ -82,7 +91,7 @@ public class PlayerData : MonoBehaviour
         }
     }
 
-    // ===== АВТОРИЗАЦИЯ (принимает строку GUID) =====
+    // ===== АВТОРИЗАЦИЯ =====
     public void SetAuthToken(string token, string userId, string username)
     {
         authToken = token;
@@ -97,7 +106,6 @@ public class PlayerData : MonoBehaviour
         Debug.Log($"✅ Authenticated: {username} (ID: {playerId})");
     }
 
-    // Перегрузка для обратной совместимости (если где-то передаётся int)
     public void SetAuthToken(string token, int userId, string username)
     {
         SetAuthToken(token, userId.ToString(), username);
@@ -111,7 +119,6 @@ public class PlayerData : MonoBehaviour
         Debug.Log($"🔄 Loaded session for: {playerName} (ID: {playerId})");
     }
 
-    // Обновление данных с сервера
     public void UpdateFromServer(PlayerDataResponse serverData)
     {
         experience = serverData.experience;
@@ -210,8 +217,78 @@ public class PlayerData : MonoBehaviour
         SavePlayerData();
     }
 
+    // ===== УПРАВЛЕНИЕ ЮНИТАМИ =====
+    /// <summary>
+    /// Попытка добавить юнитов. Возвращает true, если есть свободное место в жилых зданиях.
+    /// </summary>
+    public bool TryAddUnits(int count)
+    {
+        if (BuildingManager.Instance == null)
+        {
+            Debug.LogError("BuildingManager.Instance отсутствует!");
+            return false;
+        }
+
+        int totalCapacity = BuildingManager.Instance.GetTotalCapacity();
+        if (units + count > totalCapacity)
+        {
+            Debug.Log($"Недостаточно жилых зданий! Вместимость: {totalCapacity}, юнитов: {units}. Добавление {count} невозможно.");
+            return false;
+        }
+
+        units += count;
+        UpdateUI();
+        SavePlayerData();
+        return true;
+    }
+
+    /// <summary>
+    /// Принудительно устанавливает количество юнитов (используется при разрушении жилых зданий).
+    /// </summary>
+    public void ForceSetUnits(int newUnits)
+    {
+        if (newUnits < 0) newUnits = 0;
+        units = newUnits;
+        UpdateUI();
+        SavePlayerData();
+        Debug.Log($"Количество юнитов принудительно изменено на {units}");
+    }
+
+    // ===== ПОСТОЯННЫЙ РАСХОД ЕДЫ =====
+    private IEnumerator FoodConsumptionRoutine()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(1f);
+            if (units > 0)
+            {
+                int consumption = Mathf.CeilToInt(units * foodConsumptionPerUnitPerSecond);
+                food = Mathf.Max(0, food - consumption);
+                UpdateUI();
+                SavePlayerData();
+
+                if (food <= 0)
+                {
+                    Debug.LogWarning("⚠️ Еда закончилась! Юниты голодают.");
+                    // Здесь можно добавить дополнительную логику: уменьшение морали, урон юнитам и т.п.
+                }
+            }
+        }
+    }
+    /// <summary>
+    /// Добавляет юнитов без проверки жилья и без списания еды для старта.
+    /// </summary>
+    public void AddUnitsIgnoreCapacity(int count)
+    {
+        if (count < 0) return;
+        units += count;
+        UpdateUI();
+        SavePlayerData();
+        Debug.Log($"Добавлено {count} юнитов (игнорируя лимиты). Всего юнитов: {units}");
+    }
+
     // ===== UI =====
-    private void UpdateUI()
+    public void UpdateUI()
     {
         if (unitsText != null) unitsText.text = units.ToString();
         if (foodText != null) foodText.text = food.ToString();
@@ -224,7 +301,7 @@ public class PlayerData : MonoBehaviour
         if (questDisplayText != null) questDisplayText.text = text;
     }
 
-    // ===== КЛАССЫ ДЛЯ СОХРАНЕНИЯ =====
+    // ===== СОХРАНЯЕМЫЕ ДАННЫЕ =====
     [System.Serializable]
     public class PlayerSaveData
     {
@@ -244,7 +321,7 @@ public class PlayerData : MonoBehaviour
     }
 }
 
-// Класс ответа от сервера (должен совпадать с тем, что в AuthManager)
+// Класс ответа от сервера
 [System.Serializable]
 public class PlayerDataResponse
 {
