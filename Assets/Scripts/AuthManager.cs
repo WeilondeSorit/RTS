@@ -57,6 +57,7 @@ public class AuthManager : MonoBehaviour
             Debug.Log($"Найден сохранённый игрок: {playerId}");
             StartCoroutine(GetPlayerDataAndLoad(playerId));
         }
+        allButtons.SetActive(true);
     }
 
     private void OnLoginClicked()

@@ -4,47 +4,104 @@ using UnityEngine.UI;
 [RequireComponent(typeof(Slider))]
 public class HealthSlider : MonoBehaviour
 {
-    public Slider slider;
-    public string targetTag;
-    private BasicBulding basicBulding;
+    [Header("References")]
+    [SerializeField] private Slider slider;
+    [SerializeField] private string targetTag = "Base";
+    [SerializeField] private bool findInStart = true;
 
-    // Оптимизированное значение максимального хп (500)
-    private float maxHealth = 500f;
+    private Health targetHealth;
+    private bool isInitialized = false;
 
-    void Start()
+    private void Awake()
     {
-        // Находим объект с тегом "Base"
-        GameObject baseObject = GameObject.FindGameObjectWithTag(targetTag);
-        if (baseObject != null)
-        {
-            basicBulding = baseObject.GetComponent<BasicBulding>();
-        }
-        else
-        {
-            Debug.LogError("Объект с тегом 'Base' не найден!");
-        }
+        if (slider == null)
+            slider = GetComponent<Slider>();
 
-        // Если слайдер не назначен через инспектор, пытаемся получить его с того же объекта
         if (slider == null)
         {
-            slider = GetComponent<Slider>();
-            if (slider == null)
-            {
-                Debug.LogError("Слайдер не найден!");
-            }
+            Debug.LogError("HealthSlider: Slider component not found on this GameObject");
+            enabled = false;
+            return;
         }
 
-        // Задаем максимальное значение слайдера
-        slider.maxValue = maxHealth;
+        slider.wholeNumbers = false;
+
+        if (findInStart)
+        {
+            Initialize();
+        }
     }
 
-    void Update()
+    private void Start()
     {
-        // Если компонент BasicBulding найден, обновляем значение слайдера
-        if (basicBulding != null)
+        if (!findInStart)
         {
-            // Значение слайдера соответствует текущему здоровью здания (поле health)
-            slider.value = basicBulding.health;
+            Initialize();
+        }
+    }
+
+    public void Initialize()
+    {
+        if (isInitialized) return;
+
+        GameObject targetObject = GameObject.FindGameObjectWithTag(targetTag);
+
+        if (targetObject != null)
+        {
+            targetHealth = targetObject.GetComponent<Health>();
+        }
+
+        if (targetHealth == null)
+        {
+            Debug.LogWarning($"HealthSlider: Target with tag '{targetTag}' not found or has no Health component");
+            return;
+        }
+
+        targetHealth.OnHealthChanged += UpdateSlider;
+        UpdateSlider(targetHealth.HealthCurrent, targetHealth.MaxHealth);
+
+        isInitialized = true;
+    }
+
+    private void UpdateSlider(int currentHealth, int maxHealth)
+    {
+        if (slider == null) return;
+
+        slider.maxValue = maxHealth;
+        slider.value = currentHealth;
+    }
+
+    public void SetTarget(Health newTarget)
+    {
+        if (targetHealth != null)
+        {
+            targetHealth.OnHealthChanged -= UpdateSlider;
+        }
+
+        targetHealth = newTarget;
+        isInitialized = false;
+
+        if (targetHealth != null)
+        {
+            targetHealth.OnHealthChanged += UpdateSlider;
+            UpdateSlider(targetHealth.HealthCurrent, targetHealth.MaxHealth);
+            isInitialized = true;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (targetHealth != null)
+        {
+            targetHealth.OnHealthChanged -= UpdateSlider;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (targetHealth != null)
+        {
+            targetHealth.OnHealthChanged -= UpdateSlider;
         }
     }
 }

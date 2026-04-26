@@ -1273,10 +1273,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1258494540}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -222}
-  m_SizeDelta: {x: 0, y: 200}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 99.999985}
+  m_SizeDelta: {x: 300, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &154039984
 MonoBehaviour:
@@ -3549,6 +3549,7 @@ GameObject:
   - component: {fileID: 879385271}
   - component: {fileID: 879385270}
   - component: {fileID: 879385275}
+  - component: {fileID: 879385276}
   m_Layer: 0
   m_Name: Map
   m_TagString: Ground
@@ -3586,16 +3587,25 @@ MonoBehaviour:
   width: 100
   height: 100
   scale: 20
-  groundRenderer: {fileID: 879385272}
-  targetDensity: 0.08
-  treeRockRatio: 0.5
-  noiseThreshold: 0.5
-  minSpacing: 3
-  useCircularSpacing: 1
+  offsetX: 0
+  offsetY: 0
+  baseEdgeMargin: 20
+  groundRenderer: {fileID: 0}
   basePrefab: {fileID: 1131050632274006739, guid: 866e610fc65621b4aa0bcccd07ee493f, type: 3}
-  baseClearRadius: 10
-  minDistanceBetweenBases: 70
-  rebuildNavMesh: 1
+  minTreeScale: 0.5
+  maxTreeScale: 1.5
+  minRockScale: 0.5
+  maxRockScale: 1
+  islandCount: 18
+  minIslandRadius: 13
+  maxIslandRadius: 16
+  treeDensity: 0.2
+  rockDensity: 0.6
+  treeSpacingMultiplier: 1.5
+  rockSpacingMultiplier: 1.2
+  treeObstacle: {fileID: 3452343192776865247, guid: c2c69f8104c371c4a9ff5d159de70649, type: 3}
+  rockObstacle: {fileID: -4243202692427493921, guid: 1a64972ad17ab9f4c8901e1a961e3a6f, type: 3}
+  baseObstacle: {fileID: -7116224906970489757, guid: 6761c410843c8c047bdf217375134437, type: 3}
 --- !u!65 &879385271
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3729,6 +3739,29 @@ MonoBehaviour:
   m_MinRegionArea: 2
   m_NavMeshData: {fileID: 23800000, guid: 6ce8ffd86016ef34cbd7cc6487822366, type: 2}
   m_BuildHeightMesh: 0
+--- !u!114 &879385276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 879385269}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 0}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 0}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
 --- !u!1 &914447994
 GameObject:
   m_ObjectHideFlags: 0
@@ -6043,7 +6076,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1574390422}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 14ed7f235236b8d41b709ebc704bf5c6, type: 3}
   m_Name: 

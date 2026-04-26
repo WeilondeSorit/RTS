@@ -1273,10 +1273,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1258494540}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -222}
-  m_SizeDelta: {x: 0, y: 200}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 99.999985}
+  m_SizeDelta: {x: 300, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &154039984
 MonoBehaviour:
@@ -3586,12 +3586,13 @@ MonoBehaviour:
   width: 100
   height: 100
   scale: 20
-  groundRenderer: {fileID: 879385272}
-  targetDensity: 0.08
-  treeRockRatio: 0.5
-  noiseThreshold: 0.5
-  minSpacing: 3
-  useCircularSpacing: 1
+  groundRenderer: {fileID: 0}
+  treeCoverage: 0.1
+  rockCoverage: 0.2
+  treeThreshold: 0.1
+  rockThreshold: 0.3
+  treeSpacing: 5
+  rockSpacing: 3
   basePrefab: {fileID: 1131050632274006739, guid: 866e610fc65621b4aa0bcccd07ee493f, type: 3}
   baseClearRadius: 10
   minDistanceBetweenBases: 70

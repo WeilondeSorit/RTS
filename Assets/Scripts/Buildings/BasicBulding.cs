@@ -1,38 +1,58 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+п»їusing UnityEngine;
+using System;
 
 public class BasicBulding : Health
 {
-    public float healthBuld;
-    [SerializeField] private Health healthComponent;
+    [Header("Building Settings")]
     [SerializeField] private int baseHealth = 500;
 
-    protected virtual void Start()
-    {
-        if (healthComponent == null)
-            healthComponent = GetComponent<Health>();
+    public event Action<BasicBulding> OnBuildingDestroyed;
 
-        healthComponent.health = baseHealth;
+    private bool isBuilt = false;
+
+    protected override void Start()
+    {
+        maxHealth = baseHealth;
+        base.Start();
+        InitializeBuilding();
+    }
+
+    private void InitializeBuilding()
+    {
+        if (isBuilt) return;
+        isBuilt = true;
+        SetHealth(baseHealth);
     }
 
     public void DamageBuilding(int damage)
     {
-        healthComponent.TakeDamage(damage);
-        if (healthComponent.health <= 0)
-        {
-            HandleBuildingDestruction();
-        }
+        if (!isBuilt) InitializeBuilding();
+        TakeDamage(damage);
     }
 
     protected virtual void HandleBuildingDestruction()
     {
-        // Уничтожение объекта
-        Destroy(gameObject);
+        OnBuildingDestroyed?.Invoke(this);
     }
 
-    protected virtual void OnDestroy()
+    protected override void Die()
     {
-        // Будет переопределено в жилых зданиях для дерегистрации
+        HandleBuildingDestruction();
+        base.Die();
     }
+
+    private void OnDestroy()
+    {
+        OnBuildingDestroyed = null;
+    }
+
+    public void SetupBuilding(int customHealth)
+    {
+        baseHealth = customHealth;
+        maxHealth = customHealth;
+        SetHealth(customHealth);
+        isBuilt = true;
+    }
+
+    public bool IsBuilt => isBuilt;
 }

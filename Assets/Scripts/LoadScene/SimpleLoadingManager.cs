@@ -5,49 +5,68 @@ using UnityEngine.UI;
 
 public class SimpleLoadingManager : MonoBehaviour
 {
-    public Slider progressBar; // Привяжи в инспекторе
-    public Text loadingText;   // Привяжи в инспекторе
+    [SerializeField] private Slider progressBar;
+    [SerializeField] private Text loadingText;
 
-    // Статическая переменная для хранения имени цели
-    public static string targetSceneName;
+    private static string sceneToLoad = "";
+    private static bool shouldLoad = false;
 
     void Start()
     {
-        StartCoroutine(LoadSceneCoroutine());
+        // Если ничего не нужно загружать - выходим
+        if (!shouldLoad || string.IsNullOrEmpty(sceneToLoad))
+        {
+            Debug.LogWarning("[Loading] Нет сцены для загрузки!");
+            if (loadingText != null) loadingText.text = "Ошибка загрузки";
+            return;
+        }
+
+        // Сбрасываем флаги
+        string targetScene = sceneToLoad;
+        sceneToLoad = "";
+        shouldLoad = false;
+
+        // Запускаем загрузку
+        StartCoroutine(LoadYourScene(targetScene));
     }
 
-    IEnumerator LoadSceneCoroutine()
+    IEnumerator LoadYourScene(string sceneName)
     {
-        // Даем кадру отрисоваться, чтобы показать UI
-        yield return null;
+        Debug.Log("[Loading] Начинаем загрузку: " + sceneName);
 
-        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(targetSceneName);
-        asyncLoad.allowSceneActivation = false; // Не активируем сразу
+        // Ждем 2 кадра для инициализации UI
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
 
+        // Обновляем UI
+        if (loadingText != null) loadingText.text = "Загрузка...";
+        if (progressBar != null) progressBar.value = 0;
+
+        // Загружаем сцену
+        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
+        asyncLoad.allowSceneActivation = true; // Разрешаем активацию сразу
+
+        // Ждем завершения
         while (!asyncLoad.isDone)
         {
-            // Прогресс от 0 до 0.9
-            float progress = asyncLoad.progress / 0.9f;
-            progressBar.value = progress;
-            loadingText.text = "Загрузка: " + (int)(progress * 100) + "%";
+            float progress = Mathf.Min(asyncLoad.progress / 0.9f, 1f);
 
-            // Когда загрузка завершена
-            if (asyncLoad.progress >= 0.9f)
-            {
-                loadingText.text = "Завершение...";
-                // АВТОМАТИЧЕСКАЯ активация через 0.5 секунды
-                yield return new WaitForSeconds(0.5f);
-                asyncLoad.allowSceneActivation = true;
-            }
+            if (progressBar != null) progressBar.value = progress;
+            if (loadingText != null)
+                loadingText.text = "Загрузка: " + Mathf.RoundToInt(progress * 100) + "%";
 
             yield return null;
         }
+
+        Debug.Log("[Loading] Завершено!");
     }
 
-    // Статический метод для вызова перехода из ЛЮБОГО места
+    // ПУБЛИЧНЫЙ МЕТОД
     public static void LoadSceneWithLoading(string sceneName)
     {
-        targetSceneName = sceneName; // Сохраняем имя цели
-        SceneManager.LoadScene("LoadingScene"); // Сразу грузим сцену загрузки
+        Debug.Log("[Loading] Запрос загрузки: " + sceneName);
+        sceneToLoad = sceneName;
+        shouldLoad = true;
+        SceneManager.LoadScene("LoadingScene");
     }
 }

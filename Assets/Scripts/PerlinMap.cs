@@ -1,18 +1,11 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+п»їusing UnityEngine;
 using UnityEngine.AI;
+using Unity.AI.Navigation;
+using System.Collections.Generic;
 
 public class PerlinMap : MonoBehaviour
 {
-    // ---------- НОВЫЙ БЛОК: ВРЕМЕНА ГОДА ----------
-    public enum Season
-    {
-        Spring,
-        Summer,
-        Autumn,
-        Winter
-    }
+    public enum Season { Spring, Summer, Autumn, Winter }
 
     [System.Serializable]
     public class SeasonData
@@ -22,292 +15,251 @@ public class PerlinMap : MonoBehaviour
         public Material groundMaterial;
     }
 
-    [Header("Season Settings")]
+    private struct PlacementCandidate
+    {
+        public int x, y;
+        public bool preferTree;
+        public PlacementCandidate(int x, int y, bool preferTree)
+        {
+            this.x = x;
+            this.y = y;
+            this.preferTree = preferTree;
+        }
+    }
+
+    [Header("Season")]
     public bool randomSeason = true;
     public Season selectedSeason;
     public SeasonData[] seasonData = new SeasonData[4];
 
-    private Season currentSeason;
-    private GameObject currentTreePrefab;
-    private GameObject currentRockPrefab;
-
-    [Header("Map Settings")]
+    [Header("Map Size")]
     public int width = 100;
     public int height = 100;
     public float scale = 20f;
-    public float offsetX, offsetY;
-
-    [Header("Base Placement")]
-    public int baseEdgeMargin = 10;      // Минимальное расстояние от края карты для баз
-
     public MeshRenderer groundRenderer;
+
+    [Header("Object Balance")]
+    [Range(0f, 0.3f)] public float targetDensity = 0.08f;
+    [Range(0f, 1f)] public float treeRockRatio = 0.5f;
+    public float noiseThreshold = 0.5f;
+
+    [Header("Optimization")]
+    [Range(1f, 10f)] public float minSpacing = 3f;
+    public bool useCircularSpacing = true;
+
+    [Header("Bases")]
     public GameObject basePrefab;
+    public int baseClearRadius = 7;
+    public float minDistanceBetweenBases = 70f;
 
-    [Header("Variation Settings")]
-    public float minTreeScale = 0.8f;
-    public float maxTreeScale = 1.2f;
-    public float minRockScale = 0.7f;
-    public float maxRockScale = 1.3f;
+    [Header("NavMesh")]
+    public bool rebuildNavMesh = true;
 
-    [Header("Island Settings")]
-    public int islandCount = 9;
-    public float minIslandRadius = 8f;
-    public float maxIslandRadius = 12f;
-
-    [Header("Placement Density")]
-    [Range(0f, 1f)]
-    public float treeDensity = 0.6f;
-    [Range(0f, 1f)]
-    public float rockDensity = 0.6f;
-
-    [Header("Spacing Settings")]
-    public float treeSpacingMultiplier = 1.5f;
-    public float rockSpacingMultiplier = 1.2f;
-
-    public NavMeshObstacle treeObstacle;
-    public NavMeshObstacle rockObstacle;
-    public NavMeshObstacle baseObstacle;
-
+    private NavMeshSurface navMeshSurface;
     private float[,] noiseMap;
     private bool[,] occupied;
-    private Vector2Int playerBasePosition;
-    private Vector2Int enemyBasePosition;
-    private readonly List<Vector2> islandCenters = new();
+    private Transform environmentParent;
+    private int spacingCells;
+    private float minSpacingSqr;
 
-    void Awake()
+    void Start()
     {
-        ApplyRandomSeason();
+        Season currentSeason = randomSeason ? (Season)Random.Range(0, 4) : selectedSeason;
+        SeasonData data = seasonData[(int)currentSeason];
 
-        offsetX = Random.Range(0f, 10000f);
-        offsetY = Random.Range(0f, 10000f);
-        noiseMap = GenerateNoiseMap(width, height, scale, offsetX, offsetY);
-        occupied = new bool[width, height];
-
-        GenerateIslands();
-        PlaceBases();
-        PlaceTree();
-        PlaceRock();
-    }
-
-    void Update()
-    {
-        if (treeObstacle != null) treeObstacle.carving = true;
-        if (rockObstacle != null) rockObstacle.carving = true;
-        if (baseObstacle != null) baseObstacle.carving = true;
-    }
-
-    private void ApplyRandomSeason()
-    {
-        if (randomSeason)
+        if (data.treePrefab == null || data.rockPrefab == null)
         {
-            int seasonIndex = Random.Range(0, 4);
-            currentSeason = (Season)seasonIndex;
-        }
-        else
-        {
-            currentSeason = selectedSeason;
-        }
-
-        int idx = (int)currentSeason;
-        if (seasonData == null || idx >= seasonData.Length || seasonData[idx] == null)
-        {
-            Debug.LogError($"Нет данных для сезона {currentSeason}! Проверьте настройки SeasonData в инспекторе.");
+            Debug.LogError("РќРµ РЅР°Р·РЅР°С‡РµРЅС‹ РїСЂРµС„Р°Р±С‹ РґР»СЏ СЃРµР·РѕРЅР° " + currentSeason);
             return;
         }
 
-        SeasonData data = seasonData[idx];
-        currentTreePrefab = data.treePrefab;
-        currentRockPrefab = data.rockPrefab;
-
-        if (groundRenderer == null)
-            groundRenderer = GetComponent<MeshRenderer>();
-
         if (groundRenderer != null && data.groundMaterial != null)
             groundRenderer.material = data.groundMaterial;
-        else
-            Debug.LogWarning("Не удалось назначить материал земли: отсутствует MeshRenderer или материал в данных сезона.");
+
+        environmentParent = new GameObject("Environment").transform;
+
+        spacingCells = Mathf.Max(1, Mathf.CeilToInt(minSpacing));
+        minSpacingSqr = minSpacing * minSpacing;
+
+        GenerateNoiseMap();
+        occupied = new bool[width, height];
+
+        Vector2Int playerPos = FindBasePosition();
+        Vector2Int enemyPos = FindBasePosition();
+        while (Vector2.Distance(playerPos, enemyPos) < minDistanceBetweenBases)
+            enemyPos = FindBasePosition();
+
+        PlaceBase(playerPos, "Base");
+        PlaceBase(enemyPos, "EnemyBase");
+        ClearArea(playerPos, baseClearRadius);
+        ClearArea(enemyPos, baseClearRadius);
+
+        PlaceBalancedObjects(data.treePrefab, data.rockPrefab);
+
+        if (rebuildNavMesh)
+        {
+            navMeshSurface = FindAnyObjectByType<NavMeshSurface>();
+            if (navMeshSurface != null)
+                navMeshSurface.BuildNavMesh();
+        }
+
+        Debug.Log($"Р“РѕС‚РѕРІРѕ! Р”РµСЂРµРІСЊСЏ: {CountByTag("Tree")}, РљР°РјРЅРё: {CountByTag("Rock")}");
     }
 
-    float[,] GenerateNoiseMap(int w, int h, float s, float ox, float oy)
+    void GenerateNoiseMap()
     {
-        float[,] map = new float[w, h];
-        for (int x = 0; x < w; x++)
-            for (int y = 0; y < h; y++)
+        float offsetX = Random.Range(0f, 10000f);
+        float offsetY = Random.Range(0f, 10000f);
+        noiseMap = new float[width, height];
+
+        for (int x = 0; x < width; x++)
+            for (int y = 0; y < height; y++)
             {
-                float sx = (x + ox) / s, sy = (y + oy) / s;
-                map[x, y] = Mathf.PerlinNoise(sx, sy) * 0.6f +
-                           Mathf.PerlinNoise(sx * 2f, sy * 2f) * 0.3f +
-                           Mathf.PerlinNoise(sx * 4f, sy * 4f) * 0.1f;
+                float sx = (x + offsetX) / scale;
+                float sy = (y + offsetY) / scale;
+                noiseMap[x, y] = Mathf.PerlinNoise(sx, sy);
             }
-        return map;
     }
 
-    void GenerateIslands()
+    void PlaceBalancedObjects(GameObject treePrefab, GameObject rockPrefab)
     {
-        islandCenters.Clear();
-        // Острова тоже не будут генерироваться слишком близко к краю (отступ 20 уже есть)
-        for (int i = 0; i < islandCount; i++)
+        int totalCells = width * height;
+        int targetTotal = Mathf.RoundToInt(totalCells * targetDensity);
+        int targetTrees = Mathf.RoundToInt(targetTotal * treeRockRatio);
+        int targetRocks = targetTotal - targetTrees;
+
+        int placedTrees = 0, placedRocks = 0;
+
+        var candidates = new List<PlacementCandidate>(targetTotal * 3);
+        for (int x = 0; x < width; x++)
         {
-            float px = Random.Range(20f, width - 20f);
-            float py = Random.Range(20f, height - 20f);
-            islandCenters.Add(new Vector2(px, py));
+            for (int y = 0; y < height; y++)
+            {
+                if (occupied[x, y]) continue;
+                bool preferTree = noiseMap[x, y] > noiseThreshold;
+                candidates.Add(new PlacementCandidate(x, y, preferTree));
+            }
+        }
+
+        for (int i = candidates.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+        }
+
+        foreach (var pos in candidates)
+        {
+            if (placedTrees >= targetTrees && placedRocks >= targetRocks) break;
+
+            if (occupied[pos.x, pos.y] || IsTooClose(pos.x, pos.y)) continue;
+
+            GameObject prefab = null;
+            string tag = "";
+
+            if (pos.preferTree)
+            {
+                if (placedTrees < targetTrees && treePrefab != null)
+                { prefab = treePrefab; tag = "Tree"; }
+                else if (placedRocks < targetRocks && rockPrefab != null)
+                { prefab = rockPrefab; tag = "Rock"; }
+            }
+            else
+            {
+                if (placedRocks < targetRocks && rockPrefab != null)
+                { prefab = rockPrefab; tag = "Rock"; }
+                else if (placedTrees < targetTrees && treePrefab != null)
+                { prefab = treePrefab; tag = "Tree"; }
+            }
+
+            if (prefab == null) continue;
+
+            var obj = Instantiate(prefab, new Vector3(pos.x, 0, pos.y),
+                Quaternion.Euler(0, Random.Range(0, 360), 0), environmentParent);
+            obj.tag = tag;
+
+            // === Р•Р”РРќРЎРўР’Р•РќРќРћР• РРЎРџР РђР’Р›Р•РќРР• Р”Р›РЇ РџР Р•РџРЇРўРЎРўР’РР™ ===
+            // Р”РѕР±Р°РІР»СЏРµРј РєРѕР»Р»Р°Р№РґРµСЂ, РµСЃР»Рё РµРіРѕ РЅРµС‚
+            if (obj.GetComponent<Collider>() == null)
+                obj.AddComponent<BoxCollider>();
+
+            // Р”РѕР±Р°РІР»СЏРµРј NavMeshObstacle, С‡С‚РѕР±С‹ РІС‹СЂРµР·Р°С‚СЊ РґС‹СЂСѓ РІ NavMesh
+            NavMeshObstacle obstacle = obj.AddComponent<NavMeshObstacle>();
+            obstacle.carving = true;
+            // ===========================================
+
+            if (obj.TryGetComponent<Rigidbody>(out var rb))
+                rb.isKinematic = true;
+
+            occupied[pos.x, pos.y] = true;
+
+            if (tag == "Tree") placedTrees++;
+            else placedRocks++;
         }
     }
 
-    bool IsInAnyIsland(Vector2 pos, out float influence)
+    bool IsTooClose(int x, int y)
     {
-        influence = 0f;
-        foreach (var center in islandCenters)
+        int minX = Mathf.Max(0, x - spacingCells);
+        int maxX = Mathf.Min(width - 1, x + spacingCells);
+        int minY = Mathf.Max(0, y - spacingCells);
+        int maxY = Mathf.Min(height - 1, y + spacingCells);
+
+        for (int cx = minX; cx <= maxX; cx++)
         {
-            float dist = Vector2.Distance(pos, center);
-            influence = Mathf.Max(influence, Mathf.Clamp01(1f - dist / maxIslandRadius));
+            for (int cy = minY; cy <= maxY; cy++)
+            {
+                if (!occupied[cx, cy]) continue;
+                if (useCircularSpacing)
+                {
+                    float dx = cx - x, dy = cy - y;
+                    if (dx * dx + dy * dy < minSpacingSqr) return true;
+                }
+                else
+                {
+                    return true;
+                }
+            }
         }
-        return influence > 0.1f;
+        return false;
     }
 
-    public void PlaceBases()
+    Vector2Int FindBasePosition()
     {
-        playerBasePosition = FindSuitableBasePosition(15f);
-        enemyBasePosition = FindSuitableBasePosition(15f);
-        while (Vector2.Distance(playerBasePosition, enemyBasePosition) < 70f)
-            enemyBasePosition = FindSuitableBasePosition(15f);
-
-        var pBase = Instantiate(basePrefab, new Vector3(playerBasePosition.x, 0, playerBasePosition.y), Quaternion.identity);
-        pBase.tag = "Base";
-        var eBase = Instantiate(basePrefab, new Vector3(enemyBasePosition.x, 0, enemyBasePosition.y), Quaternion.identity);
-        eBase.tag = "EnemyBase";
-
-        ClearArea(playerBasePosition, 7);
-        ClearArea(enemyBasePosition, 7);
-    }
-
-    Vector2Int FindSuitableBasePosition(float minDist)
-    {
-        int attempts = 0;
-        // Увеличил максимальное количество попыток, так как отступ увеличен
-        while (attempts < 200)
+        int margin = 10;
+        for (int i = 0; i < 200; i++)
         {
-            var cand = new Vector2Int(
-                Random.Range(baseEdgeMargin, width - baseEdgeMargin),
-                Random.Range(baseEdgeMargin, height - baseEdgeMargin)
-            );
-            bool tooClose = false;
-            foreach (var c in islandCenters)
-                if (Vector2.Distance(cand, c) < minDist) { tooClose = true; break; }
-
-            if (!tooClose && !occupied[cand.x, cand.y]) return cand;
-            attempts++;
+            int x = Random.Range(margin, width - margin);
+            int y = Random.Range(margin, height - margin);
+            if (!occupied[x, y]) return new Vector2Int(x, y);
         }
-        // fallback – центр карты (если ничего не нашли)
         return new Vector2Int(width / 2, height / 2);
     }
 
-    public void PlaceTree()
+    void PlaceBase(Vector2Int pos, string tag)
     {
-        if (currentTreePrefab == null) return;
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                if (occupied[x, y]) continue;
-                if (IsInAnyIsland(new Vector2(x, y), out float inf) &&
-                    noiseMap[x, y] > 0.4f + (1f - inf) * 0.3f &&
-                    noiseMap[x, y] < 0.8f &&
-                    HasPathAround(x, y, 2) &&
-                    Random.value <= treeDensity)
-                {
-                    var treeObj = Instantiate(currentTreePrefab, new Vector3(x, 0, y), Quaternion.identity);
-                    float s = Random.Range(minTreeScale, maxTreeScale);
-                    treeObj.transform.localScale *= s;
-                    treeObj.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-
-                    var obs = treeObj.AddComponent<NavMeshObstacle>();
-                    obs.carving = true;
-                    treeObj.tag = "Tree";
-
-                    occupied[x, y] = true;
-                    MarkAreaOccupied(x, y, Mathf.CeilToInt(s * treeSpacingMultiplier), true);
-                }
-            }
-        }
+        var baseObj = Instantiate(basePrefab, new Vector3(pos.x, 0, pos.y), Quaternion.identity);
+        baseObj.tag = tag;
+        occupied[pos.x, pos.y] = true;
+        // Р‘Р°Р·Р° РЅРµ РїРѕР»СѓС‡Р°РµС‚ NavMeshObstacle, С‚РѕР»СЊРєРѕ РµС‘ СЂРѕРґРЅРѕР№ РєРѕР»Р»Р°Р№РґРµСЂ (РµСЃР»Рё РµСЃС‚СЊ)
     }
 
-    public void PlaceRock()
+    void ClearArea(Vector2Int center, int radius)
     {
-        if (currentRockPrefab == null) return;
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                if (occupied[x, y]) continue;
-                if (IsInAnyIsland(new Vector2(x, y), out float inf) &&
-                    noiseMap[x, y] > 0.3f + (1f - inf) * 0.2f &&
-                    noiseMap[x, y] < 0.7f &&
-                    HasPathAround(x, y, 2) &&
-                    Random.value <= rockDensity)
-                {
-                    var rockObj = Instantiate(currentRockPrefab, new Vector3(x, 0, y), Quaternion.identity);
-                    float s = Random.Range(minRockScale, maxRockScale);
-                    rockObj.transform.localScale *= s;
-                    rockObj.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-                    rockObj.transform.Rotate(Random.Range(-5f, 5f), 0f, Random.Range(-5f, 5f));
+        int minX = Mathf.Max(0, center.x - radius);
+        int maxX = Mathf.Min(width - 1, center.x + radius);
+        int minY = Mathf.Max(0, center.y - radius);
+        int maxY = Mathf.Min(height - 1, center.y + radius);
 
-                    var obs = rockObj.AddComponent<NavMeshObstacle>();
-                    obs.carving = true;
-                    rockObj.tag = "Rock";
-
-                    occupied[x, y] = true;
-                    MarkAreaOccupied(x, y, Mathf.CeilToInt(s * rockSpacingMultiplier), true);
-                }
-            }
-        }
+        for (int x = minX; x <= maxX; x++)
+            for (int y = minY; y <= maxY; y++)
+                occupied[x, y] = true;
     }
 
-    bool HasPathAround(int cx, int cy, int r)
+    int CountByTag(string tag)
     {
-        int free = 0, total = 0;
-        for (int x = -r; x <= r; x++)
-            for (int y = -r; y <= r; y++)
-            {
-                int nx = cx + x, ny = cy + y;
-                if (nx >= 0 && nx < width && ny >= 0 && ny < height)
-                {
-                    total++;
-                    if (!occupied[nx, ny]) free++;
-                }
-            }
-        return free >= total / 2;
+        int count = 0;
+        foreach (Transform child in environmentParent)
+            if (child.CompareTag(tag)) count++;
+        return count;
     }
-
-    void MarkAreaOccupied(int cx, int cy, int radius, bool hard)
-    {
-        for (int x = -radius; x <= radius; x++)
-            for (int y = -radius; y <= radius; y++)
-            {
-                int nx = cx + x, ny = cy + y;
-                if (nx >= 0 && nx < width && ny >= 0 && ny < height)
-                {
-                    float d = Mathf.Sqrt(x * x + y * y);
-                    if (hard ? d <= radius : (d <= radius * 0.5f || Random.value > 0.7f))
-                        occupied[nx, ny] = true;
-                }
-            }
-    }
-
-    public void ClearArea(Vector2Int pos, int radius)
-    {
-        for (int x = -radius; x <= radius; x++)
-            for (int y = -radius; y <= radius; y++)
-            {
-                int cx = pos.x + x, cy = pos.y + y;
-                if (cx >= 0 && cx < width && cy >= 0 && cy < height)
-                {
-                    noiseMap[cx, cy] = 0f;
-                    occupied[cx, cy] = true;
-                }
-            }
-    }
-
-    public Vector2Int GetPlayerBasePosition() => playerBasePosition;
-    public Vector2Int GetEnemyBasePosition() => enemyBasePosition;
 }

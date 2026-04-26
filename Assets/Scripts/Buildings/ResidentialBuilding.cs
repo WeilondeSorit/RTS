@@ -10,11 +10,7 @@ public abstract class ResidentialBuilding : BasicBulding
         BuildingManager.Instance.RegisterResidential(this);
     }
 
-    protected override void OnDestroy()
-    {
-        base.OnDestroy();
-        BuildingManager.Instance.UnregisterResidential(this);
-    }
+
 
     protected override void HandleBuildingDestruction()
     {

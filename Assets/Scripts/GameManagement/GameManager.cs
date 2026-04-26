@@ -70,7 +70,7 @@ public class GameManager : MonoBehaviour
            // playerData.SendDeleteRequest();
 
         menu.SetActive(true);
-        results.text = "You've lost";
+        results.text = "Вы проиграли";
         audioSource.PlayOneShot(audioLoose);
         Time.timeScale = 0f; // Останавливаем игровое время
     }
@@ -85,7 +85,7 @@ public class GameManager : MonoBehaviour
           //  playerData.SendDeleteRequest();
 
         menu.SetActive(true);
-        results.text = "You've won";
+        results.text = "Вы выиграли!";
         audioSource.PlayOneShot(audioWin);
         Time.timeScale = 0f; // Останавливаем игровое время
     }

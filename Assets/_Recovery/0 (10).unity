@@ -1273,10 +1273,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1258494540}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -222}
-  m_SizeDelta: {x: 0, y: 200}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 99.999985}
+  m_SizeDelta: {x: 300, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &154039984
 MonoBehaviour:
@@ -3568,7 +3568,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 28b6e6541d3ec4240829c9e932e1ae35, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  randomSeason: 1
+  randomSeason: 0
   selectedSeason: 0
   seasonData:
   - treePrefab: {fileID: 919132149155446097, guid: d02e6d8276e4f8a43be8f28f90a94ea3, type: 3}
@@ -3586,16 +3586,25 @@ MonoBehaviour:
   width: 100
   height: 100
   scale: 20
-  groundRenderer: {fileID: 879385272}
-  targetDensity: 0.08
-  treeRockRatio: 0.5
-  noiseThreshold: 0.5
-  minSpacing: 3
-  useCircularSpacing: 1
+  offsetX: 0
+  offsetY: 0
+  baseEdgeMargin: 20
+  groundRenderer: {fileID: 0}
   basePrefab: {fileID: 1131050632274006739, guid: 866e610fc65621b4aa0bcccd07ee493f, type: 3}
-  baseClearRadius: 10
-  minDistanceBetweenBases: 70
-  rebuildNavMesh: 1
+  minTreeScale: 0.5
+  maxTreeScale: 1.5
+  minRockScale: 0.5
+  maxRockScale: 1
+  islandCount: 18
+  minIslandRadius: 13
+  maxIslandRadius: 16
+  treeDensity: 0.2
+  rockDensity: 0.6
+  treeSpacingMultiplier: 1.5
+  rockSpacingMultiplier: 1.2
+  treeObstacle: {fileID: 3452343192776865247, guid: c2c69f8104c371c4a9ff5d159de70649, type: 3}
+  rockObstacle: {fileID: -4243202692427493921, guid: 1a64972ad17ab9f4c8901e1a961e3a6f, type: 3}
+  baseObstacle: {fileID: -7116224906970489757, guid: 6761c410843c8c047bdf217375134437, type: 3}
 --- !u!65 &879385271
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -6043,7 +6052,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1574390422}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 14ed7f235236b8d41b709ebc704bf5c6, type: 3}
   m_Name: 
