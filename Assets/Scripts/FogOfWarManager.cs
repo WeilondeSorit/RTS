@@ -5,8 +5,8 @@ using System.Linq;
 public class FogOfWarManager : MonoBehaviour
 {
     [Header("Размеры карты")]
-    public float mapWidth = 100f;
-    public float mapHeight = 100f;
+    public float mapWidth = 101f;
+    public float mapHeight = 101f;
     public float originX = 0f;
     public float originZ = 0f;
 

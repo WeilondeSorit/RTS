@@ -28,7 +28,7 @@ public class HealthSlider : MonoBehaviour
 
         if (findInStart)
         {
-            Initialize();
+            TryInitialize();
         }
     }
 
@@ -36,11 +36,12 @@ public class HealthSlider : MonoBehaviour
     {
         if (!findInStart)
         {
-            Initialize();
+            TryInitialize();
         }
     }
 
-    public void Initialize()
+    // Новая: пробует найти цель, если ещё не инициализирован
+    private void TryInitialize()
     {
         if (isInitialized) return;
 
@@ -51,16 +52,26 @@ public class HealthSlider : MonoBehaviour
             targetHealth = targetObject.GetComponent<Health>();
         }
 
-        if (targetHealth == null)
+        if (targetHealth != null)
         {
-            Debug.LogWarning($"HealthSlider: Target with tag '{targetTag}' not found or has no Health component");
-            return;
+            targetHealth.OnHealthChanged += UpdateSlider;
+            UpdateSlider(targetHealth.HealthCurrent, targetHealth.MaxHealth);
+            isInitialized = true;
         }
+        // Если не нашли - ничего, повторим попытку в Update
+    }
 
-        targetHealth.OnHealthChanged += UpdateSlider;
-        UpdateSlider(targetHealth.HealthCurrent, targetHealth.MaxHealth);
+    private void Update()
+    {
+        if (!isInitialized)
+        {
+            TryInitialize();
+        }
+    }
 
-        isInitialized = true;
+    public void Initialize()
+    {
+        TryInitialize();
     }
 
     private void UpdateSlider(int currentHealth, int maxHealth)

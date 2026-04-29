@@ -1178,7 +1178,7 @@ GameObject:
   - component: {fileID: 167951374}
   - component: {fileID: 167951375}
   - component: {fileID: 167951376}
-  - component: {fileID: 167951378}
+  - component: {fileID: 167951377}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -1355,7 +1355,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UserInfoDisplay
   infoText: {fileID: 1768952153}
   waitForInstance: 1
---- !u!114 &167951378
+--- !u!114 &167951377
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1364,16 +1364,30 @@ MonoBehaviour:
   m_GameObject: {fileID: 167951368}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bf17631dfff64034f84359b3e097d346, type: 3}
+  m_Script: {fileID: 11500000, guid: d94c18bb8acb2eb4dafbe145ed186d87, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LeaderboardDisplay
-  leaderboardTexts:
-  - {fileID: 988811851}
-  - {fileID: 1913937511}
-  - {fileID: 1530182699}
-  - {fileID: 290400439}
-  serverUrl: http://localhost:8081
-  refreshInterval: 10
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerData
+  playerId: 
+  playerName: 
+  authToken: 
+  experience: 0
+  currency: 0
+  wins: 0
+  losses: 0
+  purchasedItems: 
+  units: 0
+  food: 500
+  wood: 300
+  rock: 200
+  foodConsumptionPerUnitPerSecond: 1
+  unitsText: {fileID: 0}
+  foodText: {fileID: 0}
+  woodText: {fileID: 0}
+  rockText: {fileID: 0}
+  questDisplayText: {fileID: 0}
+  useServerSync: 0
+  playerServiceUrl: http://localhost:8082
+  autoSaveInterval: 30
 --- !u!1 &182350515
 GameObject:
   m_ObjectHideFlags: 0
@@ -2382,8 +2396,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\u041B\u043E\u0433\u0438\u043D"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ed9be4e7453256a4ab1fdfdf6b29b29d, type: 2}
-  m_sharedMaterial: {fileID: 5710522565888626012, guid: ed9be4e7453256a4ab1fdfdf6b29b29d, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 744911706c145924895448b6bdf26746, type: 2}
+  m_sharedMaterial: {fileID: -4401667510422744208, guid: 744911706c145924895448b6bdf26746, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3240,6 +3254,7 @@ GameObject:
   m_Component:
   - component: {fileID: 353180697}
   - component: {fileID: 353180698}
+  - component: {fileID: 353180699}
   m_Layer: 5
   m_Name: LeaderBoard
   m_TagString: Untagged
@@ -3289,6 +3304,25 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &353180699
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 353180696}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf17631dfff64034f84359b3e097d346, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LeaderboardDisplay
+  leaderboardTexts:
+  - {fileID: 988811851}
+  - {fileID: 1913937511}
+  - {fileID: 1530182699}
+  - {fileID: 290400439}
+  serverUrl: http://localhost:8081
+  refreshInterval: 30
 --- !u!1 &356965131
 GameObject:
   m_ObjectHideFlags: 0
@@ -3969,66 +4003,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &409937339
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 409937341}
-  - component: {fileID: 409937340}
-  m_Layer: 0
-  m_Name: GameData
-  m_TagString: Player
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &409937340
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 409937339}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d94c18bb8acb2eb4dafbe145ed186d87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerData
-  playerId: 
-  playerName: 
-  authToken: 
-  experience: 0
-  currency: 0
-  wins: 0
-  losses: 0
-  purchasedItems: 
-  units: 0
-  food: 500
-  wood: 300
-  rock: 200
-  foodConsumptionPerUnitPerSecond: 1
-  useServerSync: 0
-  playerServiceUrl: http://localhost:8082
-  autoSaveInterval: 30
---- !u!4 &409937341
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 409937339}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 478.9791, y: 152.56902, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &443995934
 GameObject:
   m_ObjectHideFlags: 0
@@ -7430,8 +7404,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\u041B\u043E\u0433\u0438\u043D"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ed9be4e7453256a4ab1fdfdf6b29b29d, type: 2}
-  m_sharedMaterial: {fileID: 5710522565888626012, guid: ed9be4e7453256a4ab1fdfdf6b29b29d, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 744911706c145924895448b6bdf26746, type: 2}
+  m_sharedMaterial: {fileID: -4401667510422744208, guid: 744911706c145924895448b6bdf26746, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -11172,8 +11146,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\u041B\u043E\u0433\u0438\u043D"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ed9be4e7453256a4ab1fdfdf6b29b29d, type: 2}
-  m_sharedMaterial: {fileID: 5710522565888626012, guid: ed9be4e7453256a4ab1fdfdf6b29b29d, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 744911706c145924895448b6bdf26746, type: 2}
+  m_sharedMaterial: {fileID: -4401667510422744208, guid: 744911706c145924895448b6bdf26746, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -13797,8 +13771,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\u041B\u043E\u0433\u0438\u043D"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ed9be4e7453256a4ab1fdfdf6b29b29d, type: 2}
-  m_sharedMaterial: {fileID: 5710522565888626012, guid: ed9be4e7453256a4ab1fdfdf6b29b29d, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 744911706c145924895448b6bdf26746, type: 2}
+  m_sharedMaterial: {fileID: -4401667510422744208, guid: 744911706c145924895448b6bdf26746, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -15582,4 +15556,3 @@ SceneRoots:
   - {fileID: 705507995}
   - {fileID: 167951372}
   - {fileID: 1173916896}
-  - {fileID: 409937341}

@@ -1,41 +1,38 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
-using System;
 
 public class PlayerData : MonoBehaviour
 {
     public static PlayerData Instance { get; private set; }
 
-    // ===== ДАННЫЕ С СЕРВЕРА (MainServer) =====
-    public string playerId;          // GUID как строка
+    // События для оповещения UI
+    public event Action OnResourcesChanged;   // вызывается при изменении юнитов, еды, дерева, камня
+    public event Action<string> OnQuestTextChanged; // вызывается при изменении текста квеста
+
+    // ===== ДАННЫЕ С СЕРВЕРА =====
+    public string playerId;
     public string playerName;
     public string authToken;
     public int experience;
-    public int currency;             // валюта
+    public int currency;
     public int wins;
     public int losses;
     public List<int> purchasedItems = new List<int>();
     public Dictionary<string, int> unitUpgrades = new Dictionary<string, int>();
 
-    // ===== ЛОКАЛЬНЫЕ РЕСУРСЫ ДЛЯ ТЕКУЩЕЙ СЕССИИ =====
+    // ===== ЛОКАЛЬНЫЕ РЕСУРСЫ =====
     [Header("Resources")]
-    public int units;       // текущее количество юнитов
+    public int units;
     public int food = 500;
     public int wood = 300;
     public int rock = 200;
 
     [Header("Unit Consumption")]
-    [SerializeField] private float foodConsumptionPerUnitPerSecond = 1f; // расход еды на юнита в секунду
+    [SerializeField] private float foodConsumptionPerUnitPerSecond = 1f;
     private Coroutine consumptionCoroutine;
-
-    // ===== UI =====
-    public TextMeshProUGUI unitsText;
-    public TextMeshProUGUI foodText;
-    public TextMeshProUGUI woodText;
-    public TextMeshProUGUI rockText;
-    public TextMeshProUGUI questDisplayText;
 
     // ===== КОНФИГУРАЦИЯ =====
     [SerializeField] private bool useServerSync = false;
@@ -71,14 +68,12 @@ public class PlayerData : MonoBehaviour
             LoadPlayerData();
             isInitialized = true;
 
-            // Запускаем постоянное потребление еды
             if (consumptionCoroutine == null)
                 consumptionCoroutine = StartCoroutine(FoodConsumptionRoutine());
         }
         else
         {
             Debug.LogWarning("⚠️ Player not authenticated. Redirecting to login...");
-            UnityEngine.SceneManagement.SceneManager.LoadScene("LoginScene");
         }
     }
 
@@ -129,7 +124,7 @@ public class PlayerData : MonoBehaviour
         unitUpgrades = serverData.unitUpgrades ?? new Dictionary<string, int>();
 
         SavePlayerData();
-        Debug.Log($"✅ Updated from server: XP={experience}, Currency={currency}, Wins={wins}, Losses={losses}");
+        Debug.Log($"✅ Updated from server: XP={experience}, Currency={currency}");
     }
 
     public void LoadPlayerData()
@@ -150,7 +145,7 @@ public class PlayerData : MonoBehaviour
                 losses = data.losses;
                 if (data.purchasedItems != null) purchasedItems = data.purchasedItems;
                 if (data.unitUpgrades != null) unitUpgrades = data.unitUpgrades;
-                Debug.Log($"✅ Loaded local data: Units={units}, Food={food}, Wood={wood}, Rock={rock}");
+                Debug.Log($"✅ Loaded local data: Units={units}, Food={food}");
             }
             catch (Exception ex)
             {
@@ -162,10 +157,10 @@ public class PlayerData : MonoBehaviour
             Debug.Log("🆕 New player - using default resources");
         }
 
-        UpdateUI();
+        // Оповещаем UI об изменении ресурсов
+        OnResourcesChanged?.Invoke();
         if (achievementSystem != null)
         {
-            achievementSystem.questDisplayText = GameObject.FindWithTag("QuestText")?.GetComponent<TextMeshProUGUI>();
             achievementSystem.LoadAchievements();
         }
     }
@@ -200,7 +195,7 @@ public class PlayerData : MonoBehaviour
     {
         achievementSystem?.OnEnemyUnitKilled(unitType);
         food += 5;
-        UpdateUI();
+        OnResourcesChanged?.Invoke();  // было UpdateUI()
         SavePlayerData();
     }
 
@@ -213,14 +208,11 @@ public class PlayerData : MonoBehaviour
             case "rock": rock += amount; break;
             default: return;
         }
-        UpdateUI();
+        OnResourcesChanged?.Invoke();  // было UpdateUI()
         SavePlayerData();
     }
 
     // ===== УПРАВЛЕНИЕ ЮНИТАМИ =====
-    /// <summary>
-    /// Попытка добавить юнитов. Возвращает true, если есть свободное место в жилых зданиях.
-    /// </summary>
     public bool TryAddUnits(int count)
     {
         if (BuildingManager.Instance == null)
@@ -232,29 +224,56 @@ public class PlayerData : MonoBehaviour
         int totalCapacity = BuildingManager.Instance.GetTotalCapacity();
         if (units + count > totalCapacity)
         {
-            Debug.Log($"Недостаточно жилых зданий! Вместимость: {totalCapacity}, юнитов: {units}. Добавление {count} невозможно.");
+            Debug.Log($"Недостаточно жилых зданий! Вместимость: {totalCapacity}, юнитов: {units}");
             return false;
         }
 
         units += count;
-        UpdateUI();
+        OnResourcesChanged?.Invoke();  // было UpdateUI()
         SavePlayerData();
         return true;
     }
 
-    /// <summary>
-    /// Принудительно устанавливает количество юнитов (используется при разрушении жилых зданий).
-    /// </summary>
     public void ForceSetUnits(int newUnits)
     {
         if (newUnits < 0) newUnits = 0;
         units = newUnits;
-        UpdateUI();
+        OnResourcesChanged?.Invoke();  // было UpdateUI()
         SavePlayerData();
         Debug.Log($"Количество юнитов принудительно изменено на {units}");
     }
 
+    public void AddUnitsIgnoreCapacity(int count)
+    {
+        if (count < 0) return;
+        units += count;
+        OnResourcesChanged?.Invoke();  // было UpdateUI()
+        SavePlayerData();
+        Debug.Log($"Добавлено {count} юнитов (игнорируя лимиты). Всего юнитов: {units}");
+    }
+
     // ===== ПОСТОЯННЫЙ РАСХОД ЕДЫ =====
+    // Проверяет, хватает ли еды, и если да — списывает её
+    public bool TryConsumeFood(int amount)
+    {
+        if (food < amount) return false;
+        food -= amount;
+        OnResourcesChanged?.Invoke();
+        SavePlayerData();
+        return true;
+    }
+
+    // Добавляет еду (например, при сборе ресурсов)
+    public void AddFood(int amount)
+    {
+        food += amount;
+        OnResourcesChanged?.Invoke();
+        SavePlayerData();
+    }
+
+    // Аналогично для дерева и камня (по желанию)
+    public void AddWood(int amount) { wood += amount; OnResourcesChanged?.Invoke(); SavePlayerData(); }
+    public void AddRock(int amount) { rock += amount; OnResourcesChanged?.Invoke(); SavePlayerData(); }
     private IEnumerator FoodConsumptionRoutine()
     {
         while (true)
@@ -264,41 +283,21 @@ public class PlayerData : MonoBehaviour
             {
                 int consumption = Mathf.CeilToInt(units * foodConsumptionPerUnitPerSecond);
                 food = Mathf.Max(0, food - consumption);
-                UpdateUI();
+                OnResourcesChanged?.Invoke();  // было UpdateUI()
                 SavePlayerData();
 
                 if (food <= 0)
                 {
                     Debug.LogWarning("⚠️ Еда закончилась! Юниты голодают.");
-                    // Здесь можно добавить дополнительную логику: уменьшение морали, урон юнитам и т.п.
                 }
             }
         }
     }
-    /// <summary>
-    /// Добавляет юнитов без проверки жилья и без списания еды для старта.
-    /// </summary>
-    public void AddUnitsIgnoreCapacity(int count)
-    {
-        if (count < 0) return;
-        units += count;
-        UpdateUI();
-        SavePlayerData();
-        Debug.Log($"Добавлено {count} юнитов (игнорируя лимиты). Всего юнитов: {units}");
-    }
 
-    // ===== UI =====
-    public void UpdateUI()
-    {
-        if (unitsText != null) unitsText.text = units.ToString();
-        if (foodText != null) foodText.text = food.ToString();
-        if (woodText != null) woodText.text = wood.ToString();
-        if (rockText != null) rockText.text = rock.ToString();
-    }
-
+    // Оповещение об изменении текста квеста (вызывается из AchievementSystem)
     public void UpdateQuestDisplay(string text)
     {
-        if (questDisplayText != null) questDisplayText.text = text;
+        OnQuestTextChanged?.Invoke(text);
     }
 
     // ===== СОХРАНЯЕМЫЕ ДАННЫЕ =====
@@ -321,7 +320,6 @@ public class PlayerData : MonoBehaviour
     }
 }
 
-// Класс ответа от сервера
 [System.Serializable]
 public class PlayerDataResponse
 {

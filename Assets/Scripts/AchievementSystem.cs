@@ -114,7 +114,7 @@ public class AchievementSystem : MonoBehaviour
 
         // Активируем первый квест по умолчанию
         activeQuests.Add(achievements["first_blood"]);
-        UpdateQuestDisplay();
+       // UpdateQuestDisplay();
     }
 
     public void LoadAchievements()
@@ -148,7 +148,7 @@ public class AchievementSystem : MonoBehaviour
         // Активируем следующий квест в цепочке
         ActivateNextQuest();
 
-        UpdateQuestDisplay();
+        //UpdateQuestDisplay();
         Debug.Log($"✅ Загружено {achievements.Count} достижений");
     }
 
@@ -228,7 +228,7 @@ public class AchievementSystem : MonoBehaviour
             }
             else
             {
-                UpdateQuestDisplay();
+                //UpdateQuestDisplay();
             }
         }
     }
@@ -284,10 +284,10 @@ public class AchievementSystem : MonoBehaviour
             yield return new WaitForSeconds(2f);
 
             // Возвращаем обычный текст
-            UpdateQuestDisplay();
+          //  UpdateQuestDisplay();
         }
     }
-
+    /*
     public void UpdateQuestDisplay()
     {
         // Если нет прямой ссылки на текст, используем PlayerData
@@ -354,7 +354,7 @@ public class AchievementSystem : MonoBehaviour
             Debug.LogWarning("⚠️ QuestDisplayText не назначен! Присвойте ссылку на TextMeshPro в инспекторе.");
         }
     }
-
+    */
     // Вспомогательный метод для создания прогресс-бара в тексте
     private string GetProgressBar(float progress)
     {

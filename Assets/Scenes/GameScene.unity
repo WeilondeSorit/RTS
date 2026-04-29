@@ -264,6 +264,7 @@ GameObject:
   - component: {fileID: 57379915}
   - component: {fileID: 57379914}
   - component: {fileID: 57379913}
+  - component: {fileID: 57379917}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -362,6 +363,23 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &57379917
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 57379912}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e733ecd86f11a084690bd4afbeaa1f52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerDataUIManager
+  unitsText: {fileID: 79579225}
+  foodText: {fileID: 539956107}
+  woodText: {fileID: 877072281}
+  rockText: {fileID: 98358000}
+  questDisplayText: {fileID: 478612179}
 --- !u!1 &70347072
 GameObject:
   m_ObjectHideFlags: 0
@@ -1367,7 +1385,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &154039985
@@ -3991,41 +4009,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1021407155}
   m_CullTransparentMesh: 1
---- !u!1 &1027962764
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1027962765}
-  m_Layer: 5
-  m_Name: Handle Slide Area
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1027962765
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1027962764}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1560885169}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -20, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1087414989
 GameObject:
   m_ObjectHideFlags: 0
@@ -4223,7 +4206,6 @@ GameObject:
   - component: {fileID: 1211549090}
   - component: {fileID: 1211549092}
   - component: {fileID: 1211549091}
-  - component: {fileID: 1211549093}
   m_Layer: 5
   m_Name: ResoursMenu
   m_TagString: Player
@@ -4294,39 +4276,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1211549089}
   m_CullTransparentMesh: 1
---- !u!114 &1211549093
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1211549089}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d94c18bb8acb2eb4dafbe145ed186d87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  playerId: 0
-  playerName: 
-  authToken: 
-  experience: 0
-  currency: 0
-  wins: 0
-  losses: 0
-  purchasedItems: 
-  units: 0
-  food: 0
-  wood: 0
-  rock: 0
-  foodConsumptionPerUnitPerSecond: 1
-  unitsText: {fileID: 79579225}
-  foodText: {fileID: 539956107}
-  woodText: {fileID: 877072281}
-  rockText: {fileID: 98358000}
-  questDisplayText: {fileID: 478612179}
-  useServerSync: 0
-  playerServiceUrl: http://localhost:8082
-  autoSaveInterval: 30
 --- !u!1 &1258494539
 GameObject:
   m_ObjectHideFlags: 0
@@ -5556,7 +5505,6 @@ RectTransform:
   m_Children:
   - {fileID: 1265029192}
   - {fileID: 937197889}
-  - {fileID: 1027962765}
   - {fileID: 856287742}
   m_Father: {fileID: 1211549090}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -5604,7 +5552,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 0}
   m_FillRect: {fileID: 1901783422}
   m_HandleRect: {fileID: 0}
@@ -5630,6 +5578,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slider: {fileID: 1560885170}
   targetTag: EnemyBase
+  findInStart: 1
 --- !u!1 &1572340435
 GameObject:
   m_ObjectHideFlags: 0
@@ -5880,7 +5829,7 @@ MonoBehaviour:
   - {fileID: 1131050632274006739, guid: 9a7d3b51deaf30a4ab3f08dddbe5e949, type: 3}
   - {fileID: 2143550019348336533, guid: 9b85e60c5088c9247867bb77b3089a80, type: 3}
   sceneCamera: {fileID: 1358902641}
-  playerData: {fileID: 1211549093}
+  playerData: {fileID: 0}
   audioBuld: {fileID: 8300000, guid: 84d35472a5d8bad47a41c305d88ebfa0, type: 3}
   audioSource: {fileID: 1574390430}
 --- !u!114 &1574390427
@@ -6043,13 +5992,13 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1574390422}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 14ed7f235236b8d41b709ebc704bf5c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FogOfWarManager
-  mapWidth: 100
-  mapHeight: 100
+  mapWidth: 101
+  mapHeight: 101
   originX: 0
   originZ: 0
   cellSize: 5
@@ -6713,41 +6662,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1807586942}
   m_CullTransparentMesh: 1
---- !u!1 &1856491431
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1856491432}
-  m_Layer: 5
-  m_Name: Handle Slide Area
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1856491432
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1856491431}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1932808171}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -20, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1860086638
 GameObject:
   m_ObjectHideFlags: 0
@@ -7022,7 +6936,6 @@ RectTransform:
   m_Children:
   - {fileID: 591292126}
   - {fileID: 723477576}
-  - {fileID: 1856491432}
   - {fileID: 1419478600}
   m_Father: {fileID: 1211549090}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -7070,7 +6983,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 0}
   m_FillRect: {fileID: 419092243}
   m_HandleRect: {fileID: 0}
@@ -7096,6 +7009,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slider: {fileID: 1932808172}
   targetTag: Base
+  findInStart: 1
 --- !u!1 &2032362462
 GameObject:
   m_ObjectHideFlags: 0

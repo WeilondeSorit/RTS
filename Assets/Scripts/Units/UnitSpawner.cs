@@ -24,23 +24,18 @@ public class UnitSpawner : MonoBehaviour
         StartCoroutine(SpawnUnits(baseObject));
     }
 
-    /// <summary>
-    /// Спавнит указанное количество юнитов принудительно (без проверок еды/жилья)
-    /// </summary>
     private void SpawnInitialUnits(GameObject baseObject, int count)
     {
         for (int i = 0; i < count; i++)
         {
-            // Случайная позиция вокруг базы
             Vector2 randomCircle = Random.insideUnitCircle.normalized * Random.Range(5f, 10f);
             Vector3 spawnOffset = new Vector3(randomCircle.x, 0, randomCircle.y);
             Vector3 spawnPosition = baseObject.transform.position + spawnOffset;
 
-            // Случайный юнит из массива
             GameObject unitPrefab = units[Random.Range(0, units.Length)];
             Instantiate(unitPrefab, spawnPosition, Quaternion.identity);
 
-            // Увеличиваем счётчик юнитов в PlayerData (без проверок)
+            // Используем специальный метод для добавления юнитов без проверок
             if (PlayerData.Instance != null)
                 PlayerData.Instance.AddUnitsIgnoreCapacity(1);
         }
@@ -69,16 +64,23 @@ public class UnitSpawner : MonoBehaviour
                         continue;
                     }
 
+                    // Пытаемся списать еду через метод TryConsumeFood
+                    if (!PlayerData.Instance.TryConsumeFood(10))
+                    {
+                        Debug.Log("Не удалось списать еду – юнит не появился");
+                        yield return new WaitForSeconds(spawnInterval);
+                        continue;
+                    }
+
+                    // Спавним юнита
                     Vector2 randomCircle = Random.insideUnitCircle.normalized * Random.Range(5f, 10f);
                     Vector3 spawnOffset = new Vector3(randomCircle.x, 0, randomCircle.y);
                     Vector3 spawnPosition = baseObject.transform.position + spawnOffset;
 
-                    GameObject newUnit = Instantiate(units[Random.Range(0, units.Length)], spawnPosition, Quaternion.identity);
+                    Instantiate(units[Random.Range(0, units.Length)], spawnPosition, Quaternion.identity);
 
-                    // Тратим еду и добавляем юнита в статистику
-                    PlayerData.Instance.food -= 10;
+                    // Добавляем юнита в статистику (метод сам вызовет OnResourcesChanged)
                     PlayerData.Instance.TryAddUnits(1);
-                    PlayerData.Instance.UpdateUI();
 
                     yield return new WaitForSeconds(spawnInterval);
                 }
@@ -96,6 +98,7 @@ public class UnitSpawner : MonoBehaviour
 
     private bool HasEnoughFood()
     {
+        // Проверяем, хватает ли еды (через публичное поле только для чтения)
         return PlayerData.Instance != null && PlayerData.Instance.food >= 10;
     }
 }
