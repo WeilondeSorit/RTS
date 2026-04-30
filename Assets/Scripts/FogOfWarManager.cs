@@ -33,7 +33,7 @@ public class FogOfWarManager : MonoBehaviour
     void Start()
     {
         GenerateFogGrid();
-        if (debugLog) Debug.Log($"“уман создан {cellsX}x{cellsZ}, область X:{originX}..{originX + mapWidth}, Z:{originZ}..{originZ + mapHeight}");
+        if (debugLog) //Debug.Log($"“уман создан {cellsX}x{cellsZ}, область X:{originX}..{originX + mapWidth}, Z:{originZ}..{originZ + mapHeight}");
         StartCoroutine(UpdateFogCoroutine());
     }
 
@@ -64,7 +64,7 @@ public class FogOfWarManager : MonoBehaviour
         {
             Destroy(fogCells[x, z]);
             fogCells[x, z] = null;
-            if (debugLog) Debug.Log($"ќткрыта €чейка [{x},{z}]");
+            //Debug.Log($"ќткрыта €чейка [{x},{z}]");
         }
     }
 
@@ -127,8 +127,8 @@ public class FogOfWarManager : MonoBehaviour
                 if (t != null)
                 {
                     RevealArea(t.position, visionRadius);
-                    if (debugLog)
-                        Debug.Log($"ќткрываю туман вокруг {t.name} на позиции {t.position}");
+                   
+                        //Debug.Log($"ќткрываю туман вокруг {t.name} на позиции {t.position}");
                 }
             }
 

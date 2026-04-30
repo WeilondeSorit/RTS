@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
+
 public class PlayerData : MonoBehaviour
 {
+    [HideInInspector] public bool isGameActive = false;  // Активна ли игровая сцена
     public static PlayerData Instance { get; private set; }
 
     // События для оповещения UI
@@ -39,7 +41,7 @@ public class PlayerData : MonoBehaviour
     [SerializeField] public string playerServiceUrl = "http://localhost:8082";
     [SerializeField] private float autoSaveInterval = 30f;
 
-    private AchievementSystem achievementSystem;
+    public AchievementSystem achievementSystem;
     private float lastSaveTime = 0f;
     private bool isInitialized = false;
 
@@ -56,10 +58,13 @@ public class PlayerData : MonoBehaviour
             return;
         }
 
-        achievementSystem = gameObject.AddComponent<AchievementSystem>();
-        achievementSystem.Initialize(this);
-    }
+        // Добавляем AchievementSystem, если его ещё нет (но пока не инициализируем)
+        achievementSystem = GetComponent<AchievementSystem>();
+        if (achievementSystem == null)
+            achievementSystem = gameObject.AddComponent<AchievementSystem>();
 
+        // Не вызываем Initialize здесь – playerId ещё не известен
+    }
     private void Start()
     {
         if (PlayerPrefs.HasKey("PlayerId"))
@@ -97,6 +102,12 @@ public class PlayerData : MonoBehaviour
         PlayerPrefs.SetString("PlayerId", userId);
         PlayerPrefs.SetString("PlayerName", username);
         PlayerPrefs.Save();
+
+        // Теперь playerId известен – можно инициализировать систему достижений
+        if (achievementSystem != null)
+            achievementSystem.Initialize(this);
+        else
+            Debug.LogError("AchievementSystem not found!");
 
         Debug.Log($"✅ Authenticated: {username} (ID: {playerId})");
     }
@@ -159,10 +170,9 @@ public class PlayerData : MonoBehaviour
 
         // Оповещаем UI об изменении ресурсов
         OnResourcesChanged?.Invoke();
-        if (achievementSystem != null)
-        {
-            achievementSystem.LoadAchievements();
-        }
+
+        // ❌ УДАЛИТЬ СТРОКУ НИЖЕ:
+        // achievementSystem.LoadAchievements();
     }
 
     public void SavePlayerData()
@@ -279,11 +289,14 @@ public class PlayerData : MonoBehaviour
         while (true)
         {
             yield return new WaitForSeconds(1f);
+
+            if (!isGameActive) continue;
+
             if (units > 0)
             {
                 int consumption = Mathf.CeilToInt(units * foodConsumptionPerUnitPerSecond);
                 food = Mathf.Max(0, food - consumption);
-                OnResourcesChanged?.Invoke();  // было UpdateUI()
+                OnResourcesChanged?.Invoke();
                 SavePlayerData();
 
                 if (food <= 0)
@@ -298,6 +311,22 @@ public class PlayerData : MonoBehaviour
     public void UpdateQuestDisplay(string text)
     {
         OnQuestTextChanged?.Invoke(text);
+    }
+    // Добавьте в PlayerData следующие методы (остальной код остаётся как есть)
+    public void SpendResources(int woodCost, int rockCost)
+    {
+        wood -= woodCost;
+        rock -= rockCost;
+        OnResourcesChanged?.Invoke();   // теперь вызов внутри самого класса – ошибки не будет
+        SavePlayerData();
+    }
+
+    public void AddResources(int woodAmount, int rockAmount)
+    {
+        wood += woodAmount;
+        rock += rockAmount;
+        OnResourcesChanged?.Invoke();
+        SavePlayerData();
     }
 
     // ===== СОХРАНЯЕМЫЕ ДАННЫЕ =====

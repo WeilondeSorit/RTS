@@ -56,7 +56,7 @@ public class Health : MonoBehaviour
     protected virtual void Die()
     {
         string enemyTag = string.Empty;
-        string[] enemyTags = { "Enemy", "Archer", "Knight", "EnemyBase", "EnemyArcher", "EnemyKnight" };
+        string[] enemyTags = { "Enemy", "Archer","EnemyBase"};
 
         foreach (string tag in enemyTags)
         {

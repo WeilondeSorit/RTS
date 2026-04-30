@@ -1,13 +1,14 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class StartGame : MonoBehaviour
 {
-    //�������� ������ ���������� ������ �������� � JSON
     public void Starting()
     {
+        if (PlayerData.Instance != null)
+            PlayerData.Instance.isGameActive = true;
+        else
+            Debug.LogError("PlayerData.Instance не найден!");
+
         Time.timeScale = 1.0f;
         SimpleLoadingManager.LoadSceneWithLoading("GameScene");
     }

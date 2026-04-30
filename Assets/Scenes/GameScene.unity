@@ -3804,7 +3804,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 226ffb4fde6ab8a49b50f10f2d8df115, type: 3}
+  m_Sprite: {fileID: 21300000, guid: fd395689196893e4f9f6c66205a4ac7b, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -4020,6 +4020,7 @@ GameObject:
   - component: {fileID: 1087414990}
   - component: {fileID: 1087414992}
   - component: {fileID: 1087414991}
+  - component: {fileID: 1087414993}
   m_Layer: 5
   m_Name: QuestMenu
   m_TagString: Untagged
@@ -4087,6 +4088,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1087414989}
   m_CullTransparentMesh: 1
+--- !u!114 &1087414993
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1087414989}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9db82ebf76360524ea9368eee32d310c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::QuestBinder
+  questText: {fileID: 478612179}
 --- !u!1 &1117482276
 GameObject:
   m_ObjectHideFlags: 0
@@ -5817,21 +5831,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 004f1c58a844cad42b5edd67cb6111f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  buildingPrefabs:
-  - {fileID: 3931184038110116919, guid: 6761c410843c8c047bdf217375134437, type: 3}
-  - {fileID: 1705587607915861198, guid: b5df81b7a7f04d44193d0d4bdc14e1ab, type: 3}
-  - {fileID: 3931184038110116919, guid: 5acbb84af993e2b4f9fd2a8aecdd13e3, type: 3}
-  - {fileID: 3931184038110116919, guid: f78cde2f497c5ba41908c04b439ffb39, type: 3}
-  - {fileID: 1131050632274006739, guid: 46453a7b22d0be54f943ea54a01dcab3, type: 3}
-  - {fileID: 1131050632274006739, guid: 46453a7b22d0be54f943ea54a01dcab3, type: 3}
-  - {fileID: 3934035896433079927, guid: 2712e8446c71581439f99e159579d13b, type: 3}
-  - {fileID: 3931184038110116919, guid: 066de02024f8f4641876b1f9f393860a, type: 3}
-  - {fileID: 1131050632274006739, guid: 9a7d3b51deaf30a4ab3f08dddbe5e949, type: 3}
-  - {fileID: 2143550019348336533, guid: 9b85e60c5088c9247867bb77b3089a80, type: 3}
+  buildings:
+  - name: "\u041E\u0431\u0449\u0435\u0436\u0438\u0442\u0438\u0435 (10 \u044E\u043D\u0438\u0442\u043E\u0432)"
+    prefab: {fileID: 2143550019348336533, guid: 9b85e60c5088c9247867bb77b3089a80, type: 3}
+    woodCost: 20
+    rockCost: 20
+  - name: "\u0424\u0435\u0440\u043C\u0430 (10 \u0435\u0434\u044B/\u0441\u0435\u043A)"
+    prefab: {fileID: 1705587607915861198, guid: b5df81b7a7f04d44193d0d4bdc14e1ab, type: 3}
+    woodCost: 5
+    rockCost: 0
+  - name: "\u041C\u0435\u043B\u044C\u043D\u0438\u0446\u0430 (10 \u0435\u0434\u044B/\u0441\u0435\u043A)"
+    prefab: {fileID: 3931184038110116919, guid: 5acbb84af993e2b4f9fd2a8aecdd13e3, type: 3}
+    woodCost: 20
+    rockCost: 10
+  - name: "\u0417\u0430\u0449\u0438\u0442\u043D\u0430\u044F \u0431\u0430\u0448\u043D\u044F"
+    prefab: {fileID: 1131050632274006739, guid: 9a7d3b51deaf30a4ab3f08dddbe5e949, type: 3}
+    woodCost: 0
+    rockCost: 0
+  - name: "\u041C\u0430\u043B\u0435\u043D\u044C\u043A\u0438\u0439 \u0434\u043E\u043C
+      (3 \u044E\u043D\u0438\u0442\u0430)"
+    prefab: {fileID: 3931184038110116919, guid: f78cde2f497c5ba41908c04b439ffb39, type: 3}
+    woodCost: 5
+    rockCost: 5
+  - name: "\u0426\u0435\u0440\u043A\u043E\u0432\u044C"
+    prefab: {fileID: 3931184038110116919, guid: 066de02024f8f4641876b1f9f393860a, type: 3}
+    woodCost: 10
+    rockCost: 10
   sceneCamera: {fileID: 1358902641}
-  playerData: {fileID: 0}
-  audioBuld: {fileID: 8300000, guid: 84d35472a5d8bad47a41c305d88ebfa0, type: 3}
+  audioBuild: {fileID: 8300000, guid: 84d35472a5d8bad47a41c305d88ebfa0, type: 3}
   audioSource: {fileID: 1574390430}
+  playerData: {fileID: 0}
 --- !u!114 &1574390427
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6313,7 +6342,7 @@ MonoBehaviour:
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 9
+          m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
           m_BoolArgument: 0
@@ -6619,7 +6648,7 @@ MonoBehaviour:
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 3
+          m_IntArgument: 4
           m_FloatArgument: 0
           m_StringArgument: 
           m_BoolArgument: 0
@@ -7426,7 +7455,7 @@ MonoBehaviour:
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 8
+          m_IntArgument: 3
           m_FloatArgument: 0
           m_StringArgument: 
           m_BoolArgument: 0

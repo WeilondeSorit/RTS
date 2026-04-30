@@ -62,32 +62,35 @@ public class GameManager : MonoBehaviour
 
     void YouLoose()
     {
-        // Удаляем данные сохранения при завершении игры
+        if (PlayerData.Instance != null)
+            PlayerData.Instance.isGameActive = false;
+
         DeleteSaveFile();
-
-        // Отправляем запрос на удаление данных с сервера
-        if (playerData != null)
-           // playerData.SendDeleteRequest();
-
         menu.SetActive(true);
         results.text = "Вы проиграли";
         audioSource.PlayOneShot(audioLoose);
-        Time.timeScale = 0f; // Останавливаем игровое время
+        Time.timeScale = 0f;
     }
 
     void YouWin()
     {
-        // Удаляем данные сохранения при завершении игры
+        if (PlayerData.Instance != null)
+            PlayerData.Instance.isGameActive = false;
+
         DeleteSaveFile();
-
-        // Отправляем запрос на удаление данных с сервера
-        if (playerData != null)
-          //  playerData.SendDeleteRequest();
-
         menu.SetActive(true);
         results.text = "Вы выиграли!";
         audioSource.PlayOneShot(audioWin);
-        Time.timeScale = 0f; // Останавливаем игровое время
+        Time.timeScale = 0f;
+    }
+
+    public void GoBack()
+    {
+        if (PlayerData.Instance != null)
+            PlayerData.Instance.isGameActive = false;
+
+        Time.timeScale = 1f;
+        SimpleLoadingManager.LoadSceneWithLoading("SampleScene");
     }
 
     void AllowCheck()
@@ -95,11 +98,7 @@ public class GameManager : MonoBehaviour
         checkAllowed = true;
     }
 
-    public void GoBack()
-    {
-        Time.timeScale = 1f; // Восстанавливаем время
-        SimpleLoadingManager.LoadSceneWithLoading("SampleScene");
-    }
+  
 
     void DeleteSaveFile()
     {

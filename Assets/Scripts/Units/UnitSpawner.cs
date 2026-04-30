@@ -5,7 +5,7 @@ public class UnitSpawner : MonoBehaviour
 {
     public GameObject enemyPrefab;      // не используется
     public Vector2Int spawnPos = new Vector2Int(85, 85);
-    public float spawnInterval = 5f;
+    public float spawnInterval = 15f;
     public GameObject[] units = new GameObject[2];
 
     void Start()
@@ -18,7 +18,7 @@ public class UnitSpawner : MonoBehaviour
         }
 
         // Спавним 5 стартовых юнитов (игнорируя ресурсы и жильё)
-        SpawnInitialUnits(baseObject, 5);
+        SpawnInitialUnits(baseObject, 30);
 
         // Запускаем обычный циклический спавн
         StartCoroutine(SpawnUnits(baseObject));
@@ -65,7 +65,7 @@ public class UnitSpawner : MonoBehaviour
                     }
 
                     // Пытаемся списать еду через метод TryConsumeFood
-                    if (!PlayerData.Instance.TryConsumeFood(10))
+                    if (!PlayerData.Instance.TryConsumeFood(5))
                     {
                         Debug.Log("Не удалось списать еду – юнит не появился");
                         yield return new WaitForSeconds(spawnInterval);

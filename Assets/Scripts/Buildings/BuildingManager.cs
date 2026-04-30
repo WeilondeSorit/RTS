@@ -54,8 +54,8 @@ public class BuildingManager : MonoBehaviour
             if (b != null)
                 totalCapacity += b.capacity;
         }
-
-        // Если вместимость уменьшилась, удаляем лишних юнитов
+        /*
+        // времено не использовать уменьшение юнитов
         if (PlayerData.Instance != null && oldCapacity > totalCapacity)
         {
             int currentUnits = PlayerData.Instance.units;
@@ -67,13 +67,12 @@ public class BuildingManager : MonoBehaviour
         }
         else if (PlayerData.Instance != null && totalCapacity == 0)
         {
-            // Если вообще нет жилья, юнитов быть не должно
             if (PlayerData.Instance.units > 0)
             {
                 Debug.Log("Нет ни одного жилого здания! Все юниты погибли.");
                 PlayerData.Instance.ForceSetUnits(0);
             }
-        }
+        }*/
     }
 
     public int GetTotalCapacity()
