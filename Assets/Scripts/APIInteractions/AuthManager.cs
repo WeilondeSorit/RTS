@@ -1,13 +1,13 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
-using UnityEngine.Networking;
-using Newtonsoft.Json;
 using System.Security.Cryptography;
 using System.Text;
+using TMPro;
+using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.UI;
 
 public class AuthManager : MonoBehaviour
 {
@@ -37,6 +37,9 @@ public class AuthManager : MonoBehaviour
     [Header("API Settings")]
     [SerializeField] private string mainServerUrl = "http://localhost:8080";
 
+    private bool isLoginInProgress = false;
+    private bool isRegisterInProgress = false;
+
     private void Start()
     {
         loginButton.onClick.AddListener(OnLoginClicked);
@@ -47,31 +50,33 @@ public class AuthManager : MonoBehaviour
         if (logoutButton != null)
             logoutButton.onClick.AddListener(OnLogoutClicked);
 
+        // Показываем панель логина по умолчанию
         loginPanel.SetActive(true);
         registerPanel.SetActive(false);
         allButtons.SetActive(false);
 
-        // --- Автовход по сохранённым данным ---
-        if (PlayerPrefs.HasKey("PlayerId"))
+        // Попытка автовхода, только если все ключи на месте
+        string savedToken = PlayerPrefs.GetString("AuthToken", "");
+        string savedPlayerId = PlayerPrefs.GetString("PlayerId", "");
+        string savedLogin = PlayerPrefs.GetString("PlayerLogin", "");
+
+        if (!string.IsNullOrEmpty(savedToken) && !string.IsNullOrEmpty(savedPlayerId) && !string.IsNullOrEmpty(savedLogin))
         {
-            string playerId = PlayerPrefs.GetString("PlayerId");
-            string savedLogin = PlayerPrefs.GetString("PlayerLogin", "");
-            if (!string.IsNullOrEmpty(savedLogin))
-            {
-                loginUsernameInput.text = savedLogin;   // показываем логин в поле
-                Debug.Log($"Автовход: {savedLogin} ({playerId})");
-                StartCoroutine(GetPlayerDataAndLoad(playerId, savedLogin));
-                allButtons.SetActive(true);
-            }
-            else
-            {
-                Debug.LogWarning("Найден PlayerId, но нет сохранённого логина – требуется ручной вход.");
-            }
+            loginUsernameInput.text = savedLogin;
+            Debug.Log($"Автовход: {savedLogin} ({savedPlayerId})");
+            StartCoroutine(GetPlayerDataAndLoad(savedPlayerId, savedLogin));
+            allButtons.SetActive(true);
+        }
+        else
+        {
+            Debug.Log("Нет сохранённой сессии – требуется ручной вход.");
         }
     }
 
     private void OnLoginClicked()
     {
+        if (isLoginInProgress) return;
+
         string login = loginUsernameInput.text.Trim();
         string password = loginPasswordInput.text;
 
@@ -86,6 +91,8 @@ public class AuthManager : MonoBehaviour
 
     private void OnRegisterClicked()
     {
+        if (isRegisterInProgress) return;
+
         string login = registerUsernameInput.text.Trim();
         string password = registerPasswordInput.text;
 
@@ -112,9 +119,13 @@ public class AuthManager : MonoBehaviour
 
     private IEnumerator LoginRequest(string login, string password)
     {
+        isLoginInProgress = true;
         loginButton.interactable = false;
         loginStatusText.text = "Подключение...";
         loginStatusText.color = Color.white;
+
+        // Перед новым входом полностью стираем старые сохранения, чтобы не осталось следов
+        ClearSessionData();
 
         string hashedPassword = HashPassword(password);
         var jsonBody = JsonConvert.SerializeObject(new { login, password = hashedPassword });
@@ -128,18 +139,24 @@ public class AuthManager : MonoBehaviour
         yield return request.SendWebRequest();
 
         loginButton.interactable = true;
+        isLoginInProgress = false;
 
         if (request.result == UnityWebRequest.Result.Success)
         {
             var response = JsonConvert.DeserializeObject<LoginResponse>(request.downloadHandler.text);
             string playerId = response.id;
+            string token = response.token;
 
-            // Сохраняем и ID, и логин
+            // Сохраняем новые данные
             PlayerPrefs.SetString("PlayerId", playerId);
+            PlayerPrefs.SetString("AuthToken", token);
             PlayerPrefs.SetString("PlayerLogin", login);
             PlayerPrefs.Save();
 
-            Debug.Log($"Успешный вход. PlayerId: {playerId}, логин: {login}");
+            if (PlayerData.Instance != null)
+                PlayerData.Instance.SetAuthToken(token, playerId, login);
+
+            Debug.Log($"Успешный вход. PlayerId: {playerId}");
             ShowLoginStatus("✅ Вход выполнен!");
             allButtons.SetActive(true);
             StartCoroutine(GetPlayerDataAndLoad(playerId, login));
@@ -148,14 +165,20 @@ public class AuthManager : MonoBehaviour
         {
             Debug.LogError($"Login error: {request.error}, {request.downloadHandler.text}");
             ShowLoginError("❌ Неверный логин или пароль");
+            // Возвращаем панель логина (на случай, если были очищены ключи)
+            loginPanel.SetActive(true);
         }
     }
 
     private IEnumerator RegisterRequest(string login, string password)
     {
+        isRegisterInProgress = true;
         registerButton.interactable = false;
         registerStatusText.text = "Регистрация...";
         registerStatusText.color = Color.white;
+
+        // Очищаем старые данные перед регистрацией
+        ClearSessionData();
 
         string hashedPassword = HashPassword(password);
         var jsonBody = JsonConvert.SerializeObject(new { login, password = hashedPassword });
@@ -169,17 +192,16 @@ public class AuthManager : MonoBehaviour
         yield return request.SendWebRequest();
 
         registerButton.interactable = true;
+        isRegisterInProgress = false;
 
         if (request.result == UnityWebRequest.Result.Success)
         {
             var response = JsonConvert.DeserializeObject<RegisterResponse>(request.downloadHandler.text);
-            string playerId = response.id;
-            ShowRegisterStatus("✅ Регистрация успешна! Вход...");
+            ShowRegisterStatus("✅ Регистрация успешна! Выполняется вход...");
             loginPanel.SetActive(false);
             registerPanel.SetActive(false);
-            Debug.Log($"Зарегистрирован новый игрок: {playerId}");
 
-            // После регистрации выполняем вход (сохранит логин/пароль и получит данные)
+            // После успешной регистрации сразу логинимся (сохранит токен и загрузит данные)
             StartCoroutine(LoginRequest(login, password));
         }
         else
@@ -193,13 +215,21 @@ public class AuthManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Загружает данные игрока с сервера (опыт, победы, поражения) и записывает в PlayerData.Instance.
+    /// Загружает данные игрока с сервера, используя сохранённый токен.
     /// </summary>
-    /// <param name="playerId">GUID игрока</param>
-    /// <param name="login">логин (сервер его не возвращает, поэтому передаём отдельно)</param>
     private IEnumerator GetPlayerDataAndLoad(string playerId, string login)
     {
+        string token = PlayerPrefs.GetString("AuthToken", "");
+        if (string.IsNullOrEmpty(token))
+        {
+            Debug.LogError("Нет токена для запроса данных игрока");
+            HandleSessionExpired();
+            yield break;
+        }
+
         using var request = UnityWebRequest.Get($"{mainServerUrl}/player/{playerId}");
+        request.SetRequestHeader("Authorization", $"Bearer {token}");
+
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.Success)
@@ -207,26 +237,30 @@ public class AuthManager : MonoBehaviour
             var playerData = JsonConvert.DeserializeObject<PlayerDataResponse>(request.downloadHandler.text);
             if (PlayerData.Instance != null)
             {
-                // Записываем логин и ID
-                PlayerData.Instance.SetAuthToken("", playerId, login);
-                // Записываем игровую статистику
+                PlayerData.Instance.SetAuthToken(token, playerId, login);
                 PlayerData.Instance.experience = playerData.experience;
                 PlayerData.Instance.currency = playerData.currency;
                 PlayerData.Instance.wins = playerData.wins;
                 PlayerData.Instance.losses = playerData.losses;
-
-                // Обновляем UI с информацией об игроке (если существует на сцене)
-                PlayerInfoDisplay display = FindObjectOfType<PlayerInfoDisplay>();
-                if (display != null)
-                    display.RefreshDisplay();
             }
             else
             {
                 Debug.LogError("PlayerData.Instance не найден на сцене!");
             }
 
-            ShowLoginStatus("Вход успешный!");
+            ShowLoginStatus("✅ Вход успешный!");
             loginPanel.SetActive(false);
+            allButtons.SetActive(true);
+
+            // Обновляем UI с информацией об игроке
+            PlayerInfoDisplay display = FindObjectOfType<PlayerInfoDisplay>();
+            if (display != null)
+                display.RefreshDisplay();
+        }
+        else if (request.responseCode == 401)
+        {
+            Debug.LogWarning("Токен недействителен, требуется повторный вход.");
+            HandleSessionExpired();
         }
         else
         {
@@ -238,14 +272,10 @@ public class AuthManager : MonoBehaviour
 
     public void OnLogoutClicked()
     {
-        // Очищаем сохранённые данные
-        if (PlayerPrefs.HasKey("PlayerId"))
-            PlayerPrefs.DeleteKey("PlayerId");
-        if (PlayerPrefs.HasKey("PlayerLogin"))
-            PlayerPrefs.DeleteKey("PlayerLogin");
-        PlayerPrefs.Save();
+        Debug.Log("Выход из аккаунта...");
+        ClearSessionData();
 
-        // Очищаем данные в синглтоне
+        // Дополнительно полностью сбрасываем PlayerData
         if (PlayerData.Instance != null)
         {
             PlayerData.Instance.experience = 0;
@@ -254,6 +284,9 @@ public class AuthManager : MonoBehaviour
             PlayerData.Instance.losses = 0;
             PlayerData.Instance.SetAuthToken("", "", "");
         }
+
+        // Останавливаем все активные корутины, чтобы избежать конфликтов
+        StopAllCoroutines();
 
         // Сбрасываем UI
         loginUsernameInput.text = "";
@@ -267,9 +300,41 @@ public class AuthManager : MonoBehaviour
         registerPanel.SetActive(false);
         allButtons.SetActive(false);
 
-        StopAllCoroutines();
+        // Снимаем блокировку, если она была
+        isLoginInProgress = false;
+        isRegisterInProgress = false;
 
         Debug.Log("Пользователь вышел из аккаунта");
+    }
+
+    /// <summary>
+    /// Вызывается при любой ошибке авторизации (401) или принудительном сбросе.
+    /// </summary>
+    private void HandleSessionExpired()
+    {
+        ClearSessionData();
+        if (PlayerData.Instance != null)
+            PlayerData.Instance.SetAuthToken("", "", "");
+
+        StopAllCoroutines();
+        loginUsernameInput.text = "";
+        loginPasswordInput.text = "";
+        loginPanel.SetActive(true);
+        registerPanel.SetActive(false);
+        allButtons.SetActive(false);
+        loginStatusText.text = "Сессия истекла, войдите заново";
+        loginStatusText.color = Color.red;
+    }
+
+    /// <summary>
+    /// Полностью удаляет сохранённые ключи из PlayerPrefs, связанные с сессией.
+    /// </summary>
+    private void ClearSessionData()
+    {
+        PlayerPrefs.DeleteKey("PlayerId");
+        PlayerPrefs.DeleteKey("PlayerLogin");
+        PlayerPrefs.DeleteKey("AuthToken");
+        PlayerPrefs.Save();
     }
 
     private string HashPassword(string password)
@@ -290,11 +355,24 @@ public class AuthManager : MonoBehaviour
     private void ShowRegisterStatus(string message) { registerStatusText.text = message; registerStatusText.color = Color.white; }
     private void ShowRegisterError(string message) { registerStatusText.text = message; registerStatusText.color = Color.red; }
 
-    private void SwitchToRegisterPanel() { loginPanel.SetActive(false); allButtons.SetActive(false); registerPanel.SetActive(true); loginStatusText.text = ""; }
-    private void SwitchToLoginPanel() { registerPanel.SetActive(false); allButtons.SetActive(false); loginPanel.SetActive(true); registerStatusText.text = ""; }
+    private void SwitchToRegisterPanel()
+    {
+        loginPanel.SetActive(false);
+        allButtons.SetActive(false);
+        registerPanel.SetActive(true);
+        loginStatusText.text = "";
+    }
 
-    [Serializable] private class LoginResponse { public string id; }
-    [Serializable] private class RegisterResponse { public string id; }
+    private void SwitchToLoginPanel()
+    {
+        registerPanel.SetActive(false);
+        allButtons.SetActive(false);
+        loginPanel.SetActive(true);
+        registerStatusText.text = "";
+    }
+
+    [Serializable] private class LoginResponse { public string id; public string token; }
+    [Serializable] private class RegisterResponse { public string id; public string token; }
     [Serializable]
     private class PlayerDataResponse
     {
