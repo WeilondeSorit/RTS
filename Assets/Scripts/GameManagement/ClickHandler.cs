@@ -1,4 +1,4 @@
-using UnityEngine;
+п»їusing UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
@@ -16,6 +16,11 @@ public class ClickHandler : MonoBehaviour
     public AudioClip audioMov2;
     public AudioClip audioMov3;
     public AudioSource audioSource;
+
+    // РџРѕР»СЏ РґР»СЏ РјРѕСЂР°Р»Рё
+    public GameObject moralePanel;
+    public Slider sliderMorale;
+    public TextMeshProUGUI textMorale;
 
     [Header("Icons")]
     public Sprite villagerIcon;
@@ -36,17 +41,14 @@ public class ClickHandler : MonoBehaviour
 
     private bool IsClickStarted()
     {
-        // Работает для PC и Android
         return Input.GetMouseButtonDown(0);
     }
 
     private bool IsPointerOverUI()
     {
-        // Проверка для PC и Android
         if (EventSystem.current.IsPointerOverGameObject())
             return true;
 
-        // Дополнительная проверка для мобильных устройств
         if (Input.touchCount > 0 && Input.touches[0].phase == TouchPhase.Began)
         {
             if (EventSystem.current.IsPointerOverGameObject(Input.touches[0].fingerId))
@@ -70,7 +72,6 @@ public class ClickHandler : MonoBehaviour
 
     private Vector3 GetClickPosition()
     {
-        // Возвращает позицию клика/тапа
         if (Input.touchCount > 0)
             return Input.touches[0].position;
         else
@@ -97,7 +98,7 @@ public class ClickHandler : MonoBehaviour
     {
         nameUnit.text = hit.collider.gameObject.name;
 
-        // Обновление здоровья
+        // РћР±РЅРѕРІР»РµРЅРёРµ Р·РґРѕСЂРѕРІСЊСЏ
         if (enemyHealth != null)
             UpdateHealth(enemyHealth.health, enemyHealth.maxHealth, 0.01f);
         else if (basicUnit != null)
@@ -105,14 +106,43 @@ public class ClickHandler : MonoBehaviour
         else if (basicBulding != null)
             UpdateHealth(basicBulding.health, basicBulding.maxHealth, 0.005f);
 
-        // Обновление иконки
+        // РћР±РЅРѕРІР»РµРЅРёРµ РёРєРѕРЅРєРё
         UpdateIcon(hit.collider.tag);
+
+        // РћР±СЂР°Р±РѕС‚РєР° РјРѕСЂР°Р»Рё: РїРѕРєР°Р·С‹РІР°РµРј С‚РѕР»СЊРєРѕ РґР»СЏ Р»СѓС‡РЅРёРєРѕРІ
+        if (hit.collider.CompareTag("Archer"))
+        {
+            Archer archer = hit.collider.GetComponent<Archer>();
+            if (archer != null && moralePanel != null)
+            {
+                moralePanel.SetActive(true);
+                UpdateMorale(archer.morale, archer.maxMorale);
+            }
+            else
+            {
+                moralePanel.SetActive(false);
+            }
+        }
+        else
+        {
+            if (moralePanel != null)
+                moralePanel.SetActive(false);
+        }
     }
 
     private void UpdateHealth(float currentHealth, float maxHealth, float multiplier)
     {
         sliderHealth.value = currentHealth * multiplier;
         textHealth.text = $"{currentHealth}/{maxHealth}";
+    }
+
+    // РСЃРїСЂР°РІР»РµРЅРЅС‹Р№ РјРµС‚РѕРґ: РѕРєСЂСѓРіР»РµРЅРёРµ РґРѕ С†РµР»С‹С… РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ
+    private void UpdateMorale(float currentMorale, float maxMorale)
+    {
+        sliderMorale.maxValue = maxMorale;
+        sliderMorale.value = currentMorale;
+        // РћРєСЂСѓРіР»СЏРµРј Р·РЅР°С‡РµРЅРёСЏ РґР»СЏ С‚РµРєСЃС‚Р°
+        textMorale.text = $"{Mathf.RoundToInt(currentMorale)}/{Mathf.RoundToInt(maxMorale)}";
     }
 
     private void UpdateIcon(string objectTag)

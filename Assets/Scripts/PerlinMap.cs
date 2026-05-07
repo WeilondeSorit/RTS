@@ -124,13 +124,30 @@ public class PerlinMap : MonoBehaviour
     void PlaceBalancedObjects(GameObject treePrefab, GameObject rockPrefab)
     {
         int totalCells = width * height;
-        int targetTotal = Mathf.RoundToInt(totalCells * targetDensity);
-        int targetTrees = Mathf.RoundToInt(targetTotal * treeRockRatio);
-        int targetRocks = targetTotal - targetTrees;
+
+        // Исходное количество объектов по старым настройкам
+        int baseTotal = Mathf.RoundToInt(totalCells * targetDensity);
+        int baseTrees = Mathf.RoundToInt(baseTotal * treeRockRatio);
+        int baseRocks = baseTotal - baseTrees;
+
+        // Уменьшаем на 1/3 (оставляем 2/3)
+        int targetTrees = Mathf.Max(0, Mathf.RoundToInt(baseTrees * 2f / 3f));
+        int targetRocks = Mathf.Max(0, Mathf.RoundToInt(baseRocks * 2f / 3f));
+        int targetTotal = targetTrees + targetRocks;
+
+        // Если ничего размещать не нужно – выходим
+        if (targetTotal <= 0)
+        {
+            Debug.Log("Целевое количество объектов равно нулю, пропускаем размещение.");
+            return;
+        }
 
         int placedTrees = 0, placedRocks = 0;
 
+        // Собираем только столько кандидатов, сколько можем обработать (оптимизация памяти)
+        // Предварительное выделение списка с запасом
         var candidates = new List<PlacementCandidate>(targetTotal * 3);
+
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -141,17 +158,22 @@ public class PerlinMap : MonoBehaviour
             }
         }
 
+        // Перемешиваем кандидатов (Fisher–Yates на списке)
         for (int i = candidates.Count - 1; i > 0; i--)
         {
             int j = Random.Range(0, i + 1);
-            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+            var temp = candidates[i];
+            candidates[i] = candidates[j];
+            candidates[j] = temp;
         }
 
         foreach (var pos in candidates)
         {
-            if (placedTrees >= targetTrees && placedRocks >= targetRocks) break;
+            if (placedTrees >= targetTrees && placedRocks >= targetRocks)
+                break;
 
-            if (occupied[pos.x, pos.y] || IsTooClose(pos.x, pos.y)) continue;
+            if (occupied[pos.x, pos.y] || IsTooClose(pos.x, pos.y))
+                continue;
 
             GameObject prefab = null;
             string tag = "";
@@ -177,15 +199,12 @@ public class PerlinMap : MonoBehaviour
                 Quaternion.Euler(0, Random.Range(0, 360), 0), environmentParent);
             obj.tag = tag;
 
-            // === ЕДИНСТВЕННОЕ ИСПРАВЛЕНИЕ ДЛЯ ПРЕПЯТСТВИЙ ===
-            // Добавляем коллайдер, если его нет
+            // Препятствия: добавляем коллайдер и NavMeshObstacle
             if (obj.GetComponent<Collider>() == null)
                 obj.AddComponent<BoxCollider>();
 
-            // Добавляем NavMeshObstacle, чтобы вырезать дыру в NavMesh
             NavMeshObstacle obstacle = obj.AddComponent<NavMeshObstacle>();
             obstacle.carving = true;
-            // ===========================================
 
             if (obj.TryGetComponent<Rigidbody>(out var rb))
                 rb.isKinematic = true;
@@ -211,7 +230,8 @@ public class PerlinMap : MonoBehaviour
                 if (!occupied[cx, cy]) continue;
                 if (useCircularSpacing)
                 {
-                    float dx = cx - x, dy = cy - y;
+                    float dx = cx - x;
+                    float dy = cy - y;
                     if (dx * dx + dy * dy < minSpacingSqr) return true;
                 }
                 else
@@ -239,8 +259,8 @@ public class PerlinMap : MonoBehaviour
     {
         var baseObj = Instantiate(basePrefab, new Vector3(pos.x, 0, pos.y), Quaternion.identity);
         baseObj.tag = tag;
+        baseObj.name = "Главная крепость";
         occupied[pos.x, pos.y] = true;
-        // База не получает NavMeshObstacle, только её родной коллайдер (если есть)
     }
 
     void ClearArea(Vector2Int center, int radius)

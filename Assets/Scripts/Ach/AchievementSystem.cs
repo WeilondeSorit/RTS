@@ -13,12 +13,24 @@ public class AchievementSystem : MonoBehaviour
 
     private string serverUrl = "http://localhost:8080";
     private string playerId;
+    private string authToken;                     // JWT токен
     private bool isReady = false;
     private Dictionary<string, int> keyToId = new Dictionary<string, int>();
 
+    /// <summary>
+    /// Инициализация с данными игрока (включая токен)
+    /// </summary>
     public void Initialize(PlayerData data)
     {
+        if (data == null)
+        {
+            Debug.LogError("AchievementSystem.Initialize: PlayerData is null");
+            return;
+        }
+
         playerId = data.playerId;
+        authToken = data.authToken;
+
         Debug.Log($"🎮 AchievementSystem инициализирован для playerId: {playerId}");
         StartCoroutine(LoadAchievementsFromServer());
     }
@@ -46,11 +58,15 @@ public class AchievementSystem : MonoBehaviour
         return questDisplayText;
     }
 
+    /// <summary>
+    /// Загружает список достижений (открытый эндпоинт, токен не нужен)
+    /// </summary>
     private IEnumerator LoadAchievementsFromServer()
     {
         using (UnityWebRequest request = UnityWebRequest.Get($"{serverUrl}/achievements"))
         {
             yield return request.SendWebRequest();
+
             if (request.result == UnityWebRequest.Result.Success)
             {
                 string json = request.downloadHandler.text;
@@ -76,7 +92,7 @@ public class AchievementSystem : MonoBehaviour
         }
     }
 
-    // Триггеры событий
+    // === ТРИГГЕРЫ СОБЫТИЙ ===
     public void OnEnemyUnitKilled() => TriggerProgress("first_blood", 1);
     public void OnEnemyUnitKilled(string unitType) => OnEnemyUnitKilled();
     public void OnResourceCollected(int amount) => TriggerProgress("resource_master", amount);
@@ -98,10 +114,20 @@ public class AchievementSystem : MonoBehaviour
         StartCoroutine(SendProgress(achId, increment));
     }
 
+    /// <summary>
+    /// Отправка прогресса на сервер (требуется авторизация)
+    /// </summary>
     private IEnumerator SendProgress(int achievementId, int increment)
     {
+        if (string.IsNullOrEmpty(authToken))
+        {
+            Debug.LogError("SendProgress: отсутствует JWT токен");
+            yield break;
+        }
+
         string url = $"{serverUrl}/player/{playerId}/achievement/{achievementId}/progress";
         Debug.Log($"📡 Отправка прогресса: {url}");
+
         string json = $"{{\"increment\":{increment}}}";
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
 
@@ -110,6 +136,8 @@ public class AchievementSystem : MonoBehaviour
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader("Content-Type", "application/json");
+            request.SetRequestHeader("Authorization", "Bearer " + authToken);   // JWT
+
             yield return request.SendWebRequest();
 
             if (request.result == UnityWebRequest.Result.Success)
@@ -121,21 +149,34 @@ public class AchievementSystem : MonoBehaviour
             }
             else
             {
-                Debug.LogError($"Ошибка: {request.error} - {request.downloadHandler.text}");
+                Debug.LogError($"Ошибка SendProgress: {request.responseCode} - {request.downloadHandler.text}");
             }
         }
     }
 
+    /// <summary>
+    /// Получение текущего квеста (требуется авторизация)
+    /// </summary>
     public IEnumerator RefreshQuest()
     {
-        if (string.IsNullOrEmpty(playerId)) yield break;
-        using (UnityWebRequest request = UnityWebRequest.Get($"{serverUrl}/player/{playerId}/quest"))
+        if (string.IsNullOrEmpty(playerId) || string.IsNullOrEmpty(authToken))
         {
+            Debug.LogWarning("RefreshQuest: нет playerId или токена");
+            yield break;
+        }
+
+        string url = $"{serverUrl}/player/{playerId}/quest";
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            request.SetRequestHeader("Authorization", "Bearer " + authToken);   // JWT
+
             yield return request.SendWebRequest();
+
             if (request.result == UnityWebRequest.Result.Success)
             {
                 string json = request.downloadHandler.text;
                 Debug.Log($"[Quest] Ответ: {json}");
+
                 if (json.Contains("Все достижения выполнены"))
                     UpdateQuestUI(null);
                 else
@@ -146,6 +187,10 @@ public class AchievementSystem : MonoBehaviour
                     else
                         Debug.LogWarning($"Не удалось распарсить квест: {json}");
                 }
+            }
+            else
+            {
+                Debug.LogError($"Ошибка RefreshQuest: {request.responseCode} - {request.downloadHandler.text}");
             }
         }
     }
@@ -186,7 +231,7 @@ public class AchievementSystem : MonoBehaviour
         return new string('█', filled) + new string('░', total - filled) + $" {Mathf.FloorToInt(progress * 100)}%";
     }
 
-    // DTO с правильным регистром
+    // ===== DTO =====
     [Serializable] private class ProgressResponse { public int progress; public bool completed; public string message; }
     [Serializable] private class QuestResponse { public int id; public string name; public string description; public int requiredValue; public int currentProgress; public int rewardCurrency; public int rewardExperience; }
     [Serializable] private class AchievementDTO { public int id; public string key; public string name; public string description; public int requiredValue; public int rewardCurrency; public int rewardExperience; }

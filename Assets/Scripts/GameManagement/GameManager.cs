@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
@@ -17,118 +16,172 @@ public class GameManager : MonoBehaviour
     private GameObject enemyBase;
     private bool gameEnded = false;
     private bool checkAllowed = false;
-
-    // Путь к файлу сохранения
-    private string saveFileName = "save.json";
+    private bool isFinalizing = false;
     private PlayerData playerData;
 
     void Start()
     {
-        // Находим базы по тегам
+        // Используем FindFirstObjectByType вместо устаревшего FindObjectOfType
+        playerData = FindFirstObjectByType<PlayerData>();
+        playerData.ResetSession();
+        if (playerData == null)
+        {
+            Debug.LogError("PlayerData not found!");
+            return;
+        }
+
         playerBase = GameObject.FindWithTag("Base");
         enemyBase = GameObject.FindWithTag("EnemyBase");
-        playerData = FindObjectOfType<PlayerData>();
 
-        if (playerBase == null)
-            Debug.LogError("Не найдена база игрока! Тег: 'Base'");
-        if (enemyBase == null)
-            Debug.LogError("Не найдена база врага! Тег: 'EnemyBase'");
-        if (playerData == null)
-            Debug.LogError("PlayerData не найден!");
+        if (playerBase == null) Debug.LogError("Base not found!");
+        if (enemyBase == null) Debug.LogError("EnemyBase not found!");
 
-        // Разрешаем проверку через 5 секунд
-        Invoke(nameof(AllowCheck), 5f);
+        // 1. Создаём сессию на сервере 8082 (Redis)
+        playerData.StartServerSession(success =>
+        {
+            if (success)
+            {
+                // 2. Загружаем сохранённое состояние
+                playerData.LoadGameStateFromServer(loaded =>
+                {
+                    if (loaded)
+                        RestoreGameState();   // восстановить юнитов и HP баз
+                    playerData.isGameActive = true;
+                    Invoke(nameof(AllowCheck), 5f);
+                });
+            }
+            else
+            {
+                Debug.LogWarning("Could not create session – playing without saving");
+                playerData.isGameActive = true;
+                Invoke(nameof(AllowCheck), 5f);
+            }
+        });
+    }
+
+    // Восстановление юнитов и здоровья баз из сохранённых данных
+    private void RestoreGameState()
+    {
+        // 1. Удаляем всех существующих юнитов, кроме баз
+        string[] unitTags = { "Villager", "Archer", "Enemy" };
+        foreach (string tag in unitTags)
+        {
+            GameObject[] units = GameObject.FindGameObjectsWithTag(tag);
+            foreach (GameObject unit in units)
+                Destroy(unit);
+        }
+
+        // 2. Восстанавливаем здоровье баз
+        GameObject playerBaseObj = GameObject.FindWithTag("Base");
+        if (playerBaseObj != null && playerBaseObj.TryGetComponent<Health>(out var playerHealth))
+            playerHealth.health = playerData.savedPlayerBaseHp;
+
+        GameObject enemyBaseObj = GameObject.FindWithTag("EnemyBase");
+        if (enemyBaseObj != null && enemyBaseObj.TryGetComponent<Health>(out var enemyHealth))
+            enemyHealth.health = playerData.savedEnemyBaseHp;
+
+        // 3. Спавним юнитов через UnitSpawner с игнорированием лимита жилья
+        UnitSpawner spawner = FindFirstObjectByType<UnitSpawner>();
+        if (spawner != null)
+        {
+            spawner.SpawnUnitByType("Villager", playerData.savedVillagers);
+            spawner.SpawnUnitByType("Archer", playerData.savedArchers);
+            spawner.SpawnUnitByType("Enemy", playerData.savedEnemies);
+        }
+        else
+        {
+            Debug.LogWarning("UnitSpawner not found – units cannot be restored");
+        }
+
+        // 4. Обновляем общее количество юнитов в PlayerData
+        playerData.units = playerData.savedVillagers + playerData.savedArchers;
+
+        Debug.Log($"Game state restored: Villagers={playerData.savedVillagers}, Archers={playerData.savedArchers}, " +
+                  $"Enemies={playerData.savedEnemies}, PlayerBaseHP={playerData.savedPlayerBaseHp}, EnemyBaseHP={playerData.savedEnemyBaseHp}");
     }
 
     void Update()
     {
-        if (gameEnded) return;
-
-        // Если проверка разрешена, проверяем условия победы/проигрыша
+        if (gameEnded || isFinalizing) return;
         if (checkAllowed)
         {
             if (playerBase == null)
-            {
                 YouLoose();
-                gameEnded = true;
-            }
             else if (enemyBase == null)
-            {
                 YouWin();
-                gameEnded = true;
-            }
         }
     }
 
     void YouLoose()
     {
-        if (PlayerData.Instance != null)
-            PlayerData.Instance.isGameActive = false;
+        if (isFinalizing) return;
+        isFinalizing = true;
+        if (playerData != null) playerData.isGameActive = false;
 
-        DeleteSaveFile();
-        menu.SetActive(true);
-        results.text = "Вы проиграли";
-        audioSource.PlayOneShot(audioLoose);
-        Time.timeScale = 0f;
+        // Сначала сохраняем состояние игры
+        playerData.SaveGameStateToServer(success =>
+        {
+            // Затем отправляем результат боя на account-сервер
+            playerData.SendBattleResult(false, (battleSuccess, error) =>
+            {
+                if (!battleSuccess)
+                    Debug.LogError($"SendBattleResult failed: {error}");
+
+                // Завершаем сессию в Redis
+                playerData.EndServerSession(false, _ =>
+                {
+                    FinalizeGame(false);
+                });
+            });
+        });
     }
 
     void YouWin()
     {
-        if (PlayerData.Instance != null)
-            PlayerData.Instance.isGameActive = false;
+        if (isFinalizing) return;
+        isFinalizing = true;
+        if (playerData != null) playerData.isGameActive = false;
 
+        playerData.SaveGameStateToServer(success =>
+        {
+            playerData.SendBattleResult(true, (battleSuccess, error) =>
+            {
+                if (!battleSuccess)
+                    Debug.LogError($"SendBattleResult failed: {error}");
+
+                playerData.EndServerSession(true, _ =>
+                {
+                    FinalizeGame(true);
+                });
+            });
+        });
+    }
+
+    private void FinalizeGame(bool isWin)
+    {
         DeleteSaveFile();
         menu.SetActive(true);
-        results.text = "Вы выиграли!";
-        audioSource.PlayOneShot(audioWin);
+        results.text = isWin ? "Вы выиграли!" : "Вы проиграли";
+        if (isWin && audioWin != null) audioSource.PlayOneShot(audioWin);
+        else if (!isWin && audioLoose != null) audioSource.PlayOneShot(audioLoose);
         Time.timeScale = 0f;
     }
 
     public void GoBack()
     {
-        if (PlayerData.Instance != null)
-            PlayerData.Instance.isGameActive = false;
-
+        if (playerData != null) playerData.isGameActive = false;
         Time.timeScale = 1f;
         SimpleLoadingManager.LoadSceneWithLoading("SampleScene");
     }
 
-    void AllowCheck()
+    private void AllowCheck()
     {
         checkAllowed = true;
     }
 
-  
-
-    void DeleteSaveFile()
+    private void DeleteSaveFile()
     {
-        string savePath = Path.Combine(Application.persistentDataPath, saveFileName);
-        if (File.Exists(savePath))
-        {
-            File.Delete(savePath);
-            Debug.Log("Файл сохранения удален.");
-        }
-        else
-        {
-            Debug.Log("Файл сохранения не найден для удаления.");
-        }
-    }
-
-    // Сохранение игры (вызывайте этот метод при необходимости)
-    public void SaveGame()
-    {
-        if (playerData != null)
-        {
-           // playerData.SaveGame();
-        }
-    }
-
-    // Загрузка игры
-    public void LoadGame()
-    {
-        if (playerData != null)
-        {
-           // playerData.LoadGame();
-        }
+        string savePath = Path.Combine(Application.persistentDataPath, "save.json");
+        if (File.Exists(savePath)) File.Delete(savePath);
     }
 }

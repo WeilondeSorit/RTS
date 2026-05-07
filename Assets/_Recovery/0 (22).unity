@@ -1898,7 +1898,7 @@ MonoBehaviour:
   - {fileID: 1530182699}
   - {fileID: 290400439}
   serverUrl: http://localhost:8081
-  refreshInterval: 90
+  refreshInterval: 10
 --- !u!1 &182350515
 GameObject:
   m_ObjectHideFlags: 0
@@ -4774,7 +4774,7 @@ MonoBehaviour:
   rock: 200
   foodConsumptionPerUnitPerSecond: 1
   useServerSync: 0
-  playerServiceUrl: http://localhost:8080
+  playerServiceUrl: http://localhost:8082
   autoSaveInterval: 30
   achievementSystem: {fileID: 0}
 --- !u!4 &409937341

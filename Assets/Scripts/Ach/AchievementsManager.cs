@@ -12,10 +12,12 @@ public class AchievementsManager : MonoBehaviour
 
     private string serverUrl = "http://localhost:8080";
     private string playerId;
+    private string authToken;
 
     public void Initialize(PlayerData data)
     {
         playerId = data.playerId;
+        authToken = data.authToken;
         Debug.Log($"[AchievementsManager] Инициализация для {playerId}");
         StartCoroutine(LoadAchievements());
     }
@@ -24,7 +26,11 @@ public class AchievementsManager : MonoBehaviour
     {
         using (UnityWebRequest request = UnityWebRequest.Get($"{serverUrl}/player/{playerId}/achievements"))
         {
+            if (!string.IsNullOrEmpty(authToken))
+                request.SetRequestHeader("Authorization", $"Bearer {authToken}");
+
             yield return request.SendWebRequest();
+
             if (request.result == UnityWebRequest.Result.Success)
             {
                 string json = request.downloadHandler.text;
@@ -34,7 +40,9 @@ public class AchievementsManager : MonoBehaviour
             }
             else
             {
-                Debug.LogError($"[Mgr] Ошибка: {request.error}");
+                Debug.LogError($"[Mgr] Ошибка: {request.error} - Код: {request.responseCode}");
+                if (request.responseCode == 401)
+                    Debug.LogError("Не авторизован. Проверьте токен.");
             }
         }
     }
@@ -44,15 +52,15 @@ public class AchievementsManager : MonoBehaviour
         // Очистка контейнера
         foreach (Transform child in achievementsContainer)
             Destroy(child.gameObject);
-        float yOffset = 0;
-        float spacing = 100f;
+
+        // Настраиваем компоновку один раз (контейнер)
+        SetupContainerLayout();
+
         foreach (var ach in achievements)
         {
             GameObject item = Instantiate(achievementPrefab, achievementsContainer);
-            RectTransform rt = item.GetComponent<RectTransform>();
-            rt.anchoredPosition = new Vector2(0, -yOffset);
-            yOffset += spacing;
-            // Поиск текста (поддерживает оба типа)
+
+            // Заполняем текстом (размеры берутся из префаба, ничего не трогаем)
             Text textComp = item.GetComponentInChildren<Text>();
             if (textComp != null)
                 textComp.text = $"{ach.name}\n{ach.description}\nПрогресс: {ach.progress}/{ach.requiredValue}";
@@ -71,41 +79,55 @@ public class AchievementsManager : MonoBehaviour
                 if (canClaim)
                 {
                     int id = ach.id;
+                    claimButton.onClick.RemoveAllListeners();
                     claimButton.onClick.AddListener(() => StartCoroutine(ClaimReward(id, claimButton)));
                 }
             }
         }
     }
 
-    private void EnsureLayout()
+    private void SetupContainerLayout()
     {
-        if (achievementsContainer.GetComponent<VerticalLayoutGroup>() == null)
-        {
-            var vlg = achievementsContainer.gameObject.AddComponent<VerticalLayoutGroup>();
-            vlg.padding = new RectOffset(10, 10, 10, 10);
-            vlg.spacing = 10;
-            vlg.childAlignment = TextAnchor.UpperLeft;
-            vlg.childForceExpandWidth = true;
-            vlg.childForceExpandHeight = false;
-        }
-        if (achievementsContainer.GetComponent<ContentSizeFitter>() == null)
-        {
-            var csf = achievementsContainer.gameObject.AddComponent<ContentSizeFitter>();
-            csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        }
+        // VerticalLayoutGroup – отвечает за позиционирование
+        VerticalLayoutGroup vlg = achievementsContainer.GetComponent<VerticalLayoutGroup>();
+        if (vlg == null)
+            vlg = achievementsContainer.gameObject.AddComponent<VerticalLayoutGroup>();
+
+        // Настройки, которые не ломают размеры префаба
+        vlg.padding = new RectOffset(10, 10, 10, 10);
+        vlg.spacing = 10;
+        vlg.childAlignment = TextAnchor.UpperLeft;
+        vlg.childControlWidth = true;   // ширина элемента = ширина контейнера (чтобы текст не вылезал)
+        vlg.childControlHeight = false;  // высота берётся из префаба
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+
+        // ContentSizeFitter – чтобы контейнер подстраивался под суммарную высоту элементов
+        ContentSizeFitter csf = achievementsContainer.GetComponent<ContentSizeFitter>();
+        if (csf == null)
+            csf = achievementsContainer.gameObject.AddComponent<ContentSizeFitter>();
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained; // ширина фиксирована (берём от родителя)
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;   // высота по содержимому
     }
+
     private IEnumerator ClaimReward(int achievementId, Button button)
     {
         using (UnityWebRequest request = new UnityWebRequest($"{serverUrl}/player/{playerId}/achievement/{achievementId}/claim", "POST"))
         {
             request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Authorization", $"Bearer {authToken}");
             yield return request.SendWebRequest();
+
             if (request.result == UnityWebRequest.Result.Success)
             {
                 Debug.Log("Награда получена!");
                 button.interactable = false;
                 StartCoroutine(LoadAchievements());
+                PlayerData.Instance?.LoadPlayerData();
+            }
+            else
+            {
+                Debug.LogError($"Ошибка при получении награды: {request.error}");
             }
         }
     }

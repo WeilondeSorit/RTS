@@ -4760,6 +4760,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerData
   isGameActive: 0
+  savedVillagers: 0
+  savedArchers: 0
+  savedEnemies: 0
+  savedPlayerBaseHp: 0
+  savedEnemyBaseHp: 0
   playerId: 
   playerName: 
   authToken: 
@@ -4773,8 +4778,8 @@ MonoBehaviour:
   wood: 300
   rock: 200
   foodConsumptionPerUnitPerSecond: 1
-  useServerSync: 0
-  playerServiceUrl: http://localhost:8080
+  accountServerUrl: http://localhost:8080
+  sessionServerUrl: http://localhost:8082
   autoSaveInterval: 30
   achievementSystem: {fileID: 0}
 --- !u!4 &409937341

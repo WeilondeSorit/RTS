@@ -498,8 +498,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 55, y: 50, z: 50}
-  m_Center: {x: 2, y: 25, z: 2}
+  m_Size: {x: 40, y: 4, z: 40}
+  m_Center: {x: 2, y: 10, z: 2}
 --- !u!208 &2132764959717898371
 NavMeshObstacle:
   m_ObjectHideFlags: 0
@@ -530,8 +530,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHealth: 100
   health: 0
-  healthBuld: 0
-  healthComponent: {fileID: 0}
   baseHealth: 500
 --- !u!1 &1200124859606866032
 GameObject:
