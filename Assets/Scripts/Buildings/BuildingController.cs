@@ -11,7 +11,7 @@ public class BuildingController : MonoBehaviour
         public int rockCost;
     }
 
-    public BuildingData[] buildings;   // массив с данными о каждом здании
+    public BuildingData[] buildings;
     public Camera sceneCamera;
     public AudioClip audioBuild;
     public AudioSource audioSource;
@@ -20,12 +20,15 @@ public class BuildingController : MonoBehaviour
     private GameObject currentBuilding;
     private int currentBuildingIndex = -1;
     private bool isPlacing = false;
+    private Quaternion targetRotation;   // фиксированный поворот на время размещения
 
     void Update()
     {
         if (isPlacing && currentBuilding != null)
         {
             MoveBuildingToMouse();
+            // Принудительно восстанавливаем поворот – даже если физика или что-то ещё его сбросили
+            currentBuilding.transform.rotation = targetRotation;
 
             if (Input.GetMouseButtonDown(0) && CanPlaceBuilding())
             {
@@ -39,7 +42,6 @@ public class BuildingController : MonoBehaviour
         }
     }
 
-    /// <summary>Вызывается, когда игрок выбирает здание по индексу в массиве buildings</summary>
     public void StartPlacingBuilding(int index)
     {
         if (playerData == null)
@@ -57,7 +59,6 @@ public class BuildingController : MonoBehaviour
             return;
         }
 
-        // Если уже было активное размещение – отменяем
         if (isPlacing)
         {
             Destroy(currentBuilding);
@@ -66,15 +67,16 @@ public class BuildingController : MonoBehaviour
 
         BuildingData data = buildings[index];
 
-        // Проверка и списание ресурсов
         if (playerData.wood >= data.woodCost && playerData.rock >= data.rockCost)
         {
             playerData.SpendResources(data.woodCost, data.rockCost);
 
             currentBuildingIndex = index;
-            currentBuilding = Instantiate(data.prefab);
+            // Разворачиваем здание на 180° относительно его исходного поворота
+            Quaternion baseRotation = data.prefab.transform.rotation;
+            targetRotation = baseRotation * Quaternion.Euler(0, 180, 0);
+            currentBuilding = Instantiate(data.prefab, Vector3.zero, targetRotation);
 
-            // Отключаем физику на время размещения (опционально)
             Rigidbody rb = currentBuilding.GetComponent<Rigidbody>();
             if (rb != null) rb.isKinematic = true;
 
@@ -92,8 +94,9 @@ public class BuildingController : MonoBehaviour
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
             Vector3 pos = hit.point;
-            pos.y = 0f; // или можно оставить pos.y = hit.point.y, если нужна высота рельефа
+            pos.y = 0f;
             currentBuilding.transform.position = pos;
+            // Поворот будет восстановлен в Update сразу после этого вызова
         }
     }
 
@@ -102,7 +105,7 @@ public class BuildingController : MonoBehaviour
         if (currentBuilding == null) return false;
 
         Collider buildingCollider = currentBuilding.GetComponent<Collider>();
-        if (buildingCollider == null) return true; // если коллайдера нет – разрешаем
+        if (buildingCollider == null) return true;
 
         Vector3 center = buildingCollider.bounds.center;
         Vector3 halfExtents = buildingCollider.bounds.extents;
@@ -111,9 +114,9 @@ public class BuildingController : MonoBehaviour
 
         foreach (Collider col in hitColliders)
         {
-            if (col == buildingCollider) continue;                // игнорируем свой коллайдер
-            if (col.transform.IsChildOf(currentBuilding.transform)) continue; // игнорируем дочерние
-            return false; // нашли посторонний объект – место занято
+            if (col == buildingCollider) continue;
+            if (col.transform.IsChildOf(currentBuilding.transform)) continue;
+            return false;
         }
 
         return true;
@@ -123,12 +126,13 @@ public class BuildingController : MonoBehaviour
     {
         isPlacing = false;
 
-        // Регистрация жилого здания, если это ResidentialBuilding
+        // Окончательно фиксируем нужный поворот (на случай, если что‑то его изменило)
+        currentBuilding.transform.rotation = targetRotation;
+
         ResidentialBuilding residential = currentBuilding.GetComponent<ResidentialBuilding>();
         if (residential != null && BuildingManager.Instance != null)
             BuildingManager.Instance.RegisterResidential(residential);
 
-        // Если нужна физика после установки
         Rigidbody rb = currentBuilding.GetComponent<Rigidbody>();
         if (rb != null) rb.isKinematic = false;
 
@@ -138,7 +142,6 @@ public class BuildingController : MonoBehaviour
 
     void CancelPlacement()
     {
-        // Возврат ресурсов
         if (currentBuildingIndex >= 0 && currentBuildingIndex < buildings.Length)
         {
             BuildingData data = buildings[currentBuildingIndex];

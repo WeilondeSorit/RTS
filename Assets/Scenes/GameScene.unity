@@ -6214,8 +6214,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyPrefab: {fileID: 1861785189790964152, guid: 0f072799286b85b49aac555093318a39, type: 3}
   spawnPos: {x: 0, y: 0, z: 0}
-  waveIntervalMin: 25
-  waveIntervalMax: 35
+  waveIntervalMin: 35
+  waveIntervalMax: 45
   enemiesPerWave: 0200000002000000030000000300000003000000040000000400000005000000
   spawnDelayWithinWave: 0.3
   spawnOffset: 1.5

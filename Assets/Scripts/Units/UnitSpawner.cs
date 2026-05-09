@@ -79,58 +79,69 @@ public class UnitSpawner : MonoBehaviour
 
     IEnumerator SpawnUnits(GameObject baseObject)
     {
+        // Проверка наличия префабов
+        if (units == null || units.Length == 0)
+        {
+            Debug.LogError("UnitSpawner: массив units пуст!");
+            yield break;
+        }
+
         while (true)
         {
-            for (int i = 0; i < 10; i++)
+            // Ждём заданный интервал перед каждой попыткой спавна
+            yield return new WaitForSeconds(spawnInterval);
+
+            // Проверяем все условия
+            if (!HasFreeHousing())
             {
-                for (int j = 0; j < 10; j++)
-                {
-                    if (!HasFreeHousing())
-                    {
-                        Debug.Log("Нет свободного жилья – юнит не появился");
-                        yield return new WaitForSeconds(spawnInterval);
-                        continue;
-                    }
-
-                    if (!HasEnoughFood())
-                    {
-                        Debug.Log("Недостаточно еды – юнит не появился");
-                        yield return new WaitForSeconds(spawnInterval);
-                        continue;
-                    }
-
-                    if (!PlayerData.Instance.TryConsumeFood(5))
-                    {
-                        Debug.Log("Не удалось списать еду – юнит не появился");
-                        yield return new WaitForSeconds(spawnInterval);
-                        continue;
-                    }
-
-                    // Спавним юнита
-                    Vector2 randomCircle = Random.insideUnitCircle.normalized * Random.Range(5f, 10f);
-                    Vector3 spawnOffset = new Vector3(randomCircle.x, 0, randomCircle.y);
-                    Vector3 spawnPosition = baseObject.transform.position + spawnOffset;
-
-                    GameObject newUnit = Instantiate(units[Random.Range(0, units.Length)], spawnPosition, Quaternion.identity);
-
-                    // Присваиваем случайное славянское имя
-                    string randomName = slavicNames[Random.Range(0, slavicNames.Length)];
-                    newUnit.name = randomName;
-
-                    // Добавляем юнита в статистику
-                    PlayerData.Instance.TryAddUnits(1);
-
-                    yield return new WaitForSeconds(spawnInterval);
-                }
+                Debug.Log("Нет свободного жилья – юнит не появился");
+                continue;
             }
+
+            if (!HasEnoughFood())
+            {
+                Debug.Log("Недостаточно еды – юнит не появился");
+                continue;
+            }
+
+            if (!PlayerData.Instance.TryConsumeFood(5))
+            {
+                Debug.Log("Не удалось списать еду – юнит не появился");
+                continue;
+            }
+
+            // Выбираем случайного юнита из массива (Villager или Archer)
+            GameObject prefabToSpawn = units[Random.Range(0, units.Length)];
+            if (prefabToSpawn == null)
+            {
+                Debug.LogError("UnitSpawner: один из префабов юнитов не назначен!");
+                continue;
+            }
+
+            // Спавним юнита
+            Vector2 randomCircle = Random.insideUnitCircle.normalized * Random.Range(5f, 10f);
+            Vector3 spawnOffset = new Vector3(randomCircle.x, 0, randomCircle.y);
+            Vector3 spawnPosition = baseObject.transform.position + spawnOffset;
+
+            GameObject newUnit = Instantiate(prefabToSpawn, spawnPosition, Quaternion.identity);
+
+            // Присваиваем случайное славянское имя
+            string randomName = slavicNames[Random.Range(0, slavicNames.Length)];
+            newUnit.name = randomName;
+
+            // Добавляем юнита в статистику
+            PlayerData.Instance.TryAddUnits(1);
         }
     }
 
     private bool HasFreeHousing()
     {
-        if (BuildingManager.Instance == null) return false;
+        if (BuildingManager.Instance == null)
+        {
+            Debug.LogWarning("BuildingManager.Instance не найден!");
+            return false;
+        }
 
-        // === ВМЕСТИМОСТЬ: здания + 10 от главной башни ===
         int totalCapacity = BuildingManager.Instance.GetTotalCapacity() + BASE_TOWER_HOUSING;
         int currentUnits = PlayerData.Instance != null ? PlayerData.Instance.units : 0;
         return currentUnits < totalCapacity;

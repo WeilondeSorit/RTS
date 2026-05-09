@@ -1,4 +1,14 @@
+using UnityEngine;
+
 public class MoraleBuilding : BasicBulding
 {
-    // Логика восстановления морали будет добавлена позже
+    private void Start()
+    {
+        Archer.churchesCount++;
+    }
+
+    private void OnDestroy()
+    {
+        Archer.churchesCount--;
+    }
 }

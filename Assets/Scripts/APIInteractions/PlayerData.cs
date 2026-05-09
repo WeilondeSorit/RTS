@@ -298,7 +298,7 @@ public class PlayerData : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(5f);
             if (!isGameActive) continue;
             if (units > 0)
             {
@@ -549,7 +549,16 @@ public class PlayerData : MonoBehaviour
         }
         StartCoroutine(EndSessionCoroutine(isWin, onComplete));
     }
-
+    public void NotifyResourcesChanged()
+    {
+        OnResourcesChanged?.Invoke();
+    }
+    public void SetPurchasedItems(List<int> items)
+    {
+        purchasedItems = items ?? new List<int>();
+        SavePlayerData();
+        NotifyResourcesChanged();
+    }
     private IEnumerator EndSessionCoroutine(bool isWin, Action<bool> onComplete)
     {
         var req = new EndSessionRequest { isWin = isWin };
