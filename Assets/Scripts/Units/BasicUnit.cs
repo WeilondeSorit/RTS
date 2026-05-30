@@ -12,6 +12,14 @@ public abstract class BasicUnit : Health
     {
         InitializeNavMeshAgent();
     }
+    private void Start()
+    {
+        if (ShopEffectManager.Instance != null)
+        {
+            ShopEffectManager.Instance.ApplyUnitUpgrade(this);  // только здоровье
+            ShopEffectManager.Instance.ApplySpeedBoost(this);
+        }
+    }
 
     private void InitializeNavMeshAgent()
     {

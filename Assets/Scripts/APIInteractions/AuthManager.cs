@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using Newtonsoft.Json;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -35,9 +35,10 @@ public class AuthManager : MonoBehaviour
     [SerializeField] private string gameSceneName = "GameScene";
 
     [Header("API Settings")]
-    [SerializeField] private string mainServerUrl = "http://localhost:8080";
+    [SerializeField] private string mainServerUrl = "http://localhost:8083";
 
     private bool isLoginInProgress = false;
+    private AvatarManager avatar;
     private bool isRegisterInProgress = false;
 
     private void Start()
@@ -242,6 +243,9 @@ public class AuthManager : MonoBehaviour
                 PlayerData.Instance.currency = playerData.currency;
                 PlayerData.Instance.wins = playerData.wins;
                 PlayerData.Instance.losses = playerData.losses;
+                PlayerData.Instance.purchasedItems = playerData.purchasedItems ?? new List<int>();
+                // Если есть unitUpgrades, можно загрузить – по необходимости
+                // PlayerData.Instance.unitUpgrades = playerData.unitUpgrades ?? new Dictionary<string, int>();
             }
             else
             {
@@ -256,6 +260,9 @@ public class AuthManager : MonoBehaviour
             PlayerInfoDisplay display = FindObjectOfType<PlayerInfoDisplay>();
             if (display != null)
                 display.RefreshDisplay();
+
+            // ПРИМЕНЯЕМ АВАТАР ПОСЛЕ ЗАГРУЗКИ ДАННЫХ
+            ApplySpecialAvatarFromDatabase();
         }
         else if (request.responseCode == 401)
         {
@@ -268,6 +275,43 @@ public class AuthManager : MonoBehaviour
             ShowLoginError("Ошибка загрузки данных игрока");
             allButtons.SetActive(false);
         }
+    }
+
+    /// <summary>
+    /// Применяет особый аватар, если он куплен (синхронизация с БД).
+    /// Ищет сначала ShopEffectManager, потом AvatarManager для совместимости.
+    /// </summary>
+    private void ApplySpecialAvatarFromDatabase()
+    {
+        // Вариант 1: через ShopEffectManager (современная логика)
+        var shopEffectManager = FindAnyObjectByType<ShopEffectManager>();
+        if (shopEffectManager != null)
+        {
+            // Предполагается, что в ShopEffectManager есть метод SyncAvatarWithDatabase
+            var method = shopEffectManager.GetType().GetMethod("SyncAvatarWithDatabase");
+            if (method != null)
+            {
+                method.Invoke(shopEffectManager, null);
+                Debug.Log("Аватар синхронизирован через ShopEffectManager");
+                return;
+            }
+        }
+
+        // Вариант 2: через AvatarManager (старая логика)
+        var avatarManager = FindObjectOfType<AvatarManager>();
+        if (avatarManager != null)
+        {
+            // Предполагается, что есть метод SyncWithDatabase или ApplyAvatarIfPurchased
+            var method = avatarManager.GetType().GetMethod("SyncWithDatabase");
+            if (method != null)
+            {
+                method.Invoke(avatarManager, null);
+                Debug.Log("Аватар синхронизирован через AvatarManager");
+                return;
+            }
+        }
+
+        Debug.LogWarning("Не найден компонент для управления аватаром (ShopEffectManager или AvatarManager). Аватар не применён.");
     }
 
     public void OnLogoutClicked()
@@ -283,10 +327,29 @@ public class AuthManager : MonoBehaviour
             PlayerData.Instance.wins = 0;
             PlayerData.Instance.losses = 0;
             PlayerData.Instance.SetAuthToken("", "", "");
+            if (PlayerData.Instance.purchasedItems != null)
+                PlayerData.Instance.purchasedItems.Clear();
         }
 
         // Останавливаем все активные корутины, чтобы избежать конфликтов
         StopAllCoroutines();
+
+        // Сбрасываем настройки аватара (очищаем PlayerPrefs)
+        AvatarManager avatar = FindObjectOfType<AvatarManager>();
+        if (avatar != null)
+        {
+            avatar.ClearSpecialAvatarPrefs();
+        }
+        else
+        {
+            // Если есть ShopEffectManager, возможно, у него тоже есть метод очистки
+            var shopEffect = FindObjectOfType<ShopEffectManager>();
+            if (shopEffect != null)
+            {
+                var method = shopEffect.GetType().GetMethod("ClearAvatarPrefs");
+                method?.Invoke(shopEffect, null);
+            }
+        }
 
         // Сбрасываем UI
         loginUsernameInput.text = "";

@@ -5,7 +5,7 @@ using UnityEngine;
 public class DefenseBuilding : BasicBulding
 {
     [Header("Attack Settings")]
-    public float attackRange = 12f;        // увеличенный радиус атаки
+    public float attackRange = 12f;
     public float attackCooldown = 2f;
     public int damage = 25;
     public LayerMask targetLayer;
@@ -14,7 +14,6 @@ public class DefenseBuilding : BasicBulding
 
     void Update()
     {
-        // Атака только когда прошло время перезарядки
         if (Time.time >= lastAttackTime + attackCooldown)
         {
             Attack();
@@ -23,56 +22,50 @@ public class DefenseBuilding : BasicBulding
 
     void Attack()
     {
-        // Находим все цели в радиусе атаки
-        Collider[] targets = Physics.OverlapSphere(transform.position, attackRange, targetLayer);
+        Collider[] targets;
 
-        Health targetHealth = null;
-        BasicBulding targetBuilding = null; // для вражеской базы
-
-        foreach (Collider targetCollider in targets)
+        // Если targetLayer не назначен, ищем по всем слоям
+        if (targetLayer.value == 0)
         {
-            // Не атакуем себя
-            if (targetCollider.transform == transform)
-                continue;
+            targets = Physics.OverlapSphere(transform.position, attackRange);
+        }
+        else
+        {
+            targets = Physics.OverlapSphere(transform.position, attackRange, targetLayer);
+        }
 
-            // Пропускаем союзных юнитов (у которых есть компонент BasicUnit)
-            if (targetCollider.GetComponent<BasicUnit>() != null)
-                continue;
+        // 1. Приоритет: вражеские юниты (компонент Enemy)
+        foreach (Collider col in targets)
+        {
+            if (col.transform == transform) continue;               // себя не бьём
+            if (col.GetComponent<BasicBulding>() != null) continue; // здания не трогаем
+            if (col.GetComponent<BasicUnit>() != null) continue;    // своих юнитов пропускаем
 
-            // Проверяем, является ли цель зданием
-            var building = targetCollider.GetComponent<BasicBulding>();
-            if (building != null)
+            Enemy enemy = col.GetComponent<Enemy>();
+            if (enemy != null)
             {
-                // Атакуем вражескую базу (приоритет)
-                if (targetCollider.CompareTag("EnemyBase"))
-                {
-                    targetBuilding = building;
-                    break;
-                }
-                // Свои здания не трогаем
-                continue;
+                enemy.TakeDamage(damage);
+                lastAttackTime = Time.time;
+                return;
             }
+        }
 
-            // Ищем вражеского юнита через компонент Health
-            var health = targetCollider.GetComponent<Health>();
+        // 2. Остальные враги (Health, но без BasicBulding и BasicUnit)
+        foreach (Collider col in targets)
+        {
+            if (col.transform == transform) continue;
+            if (col.GetComponent<BasicBulding>() != null) continue;
+            if (col.GetComponent<BasicUnit>() != null) continue;
+
+            Health health = col.GetComponent<Health>();
             if (health != null)
             {
-                targetHealth = health;
-                break;
+                health.TakeDamage(damage);
+                lastAttackTime = Time.time;
+                return;
             }
         }
-
-        // Наносим урон выбранной цели
-        if (targetBuilding != null)
-        {
-            targetBuilding.TakeDamage(damage);
-            lastAttackTime = Time.time;
-        }
-        else if (targetHealth != null)
-        {
-            targetHealth.TakeDamage(damage);
-            lastAttackTime = Time.time;
-        }
+        // Если ничего не нашли – атака не происходит, кулдаун не тратится
     }
 
     void OnDrawGizmosSelected()

@@ -11,7 +11,7 @@ public class AchievementSystem : MonoBehaviour
     [SerializeField] private TextMeshProUGUI questDisplayText;
     [SerializeField] private string questDisplayTag = "QuestText";
 
-    private string serverUrl = "http://localhost:8080";
+    private string serverUrl = "http://localhost:8083";
     private string playerId;
     private string authToken;                     // JWT токен
     private bool isReady = false;

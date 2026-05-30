@@ -27,9 +27,9 @@ public class ShopItemUI : MonoBehaviour
         if (nameText != null)
             nameText.text = data.name;
         if (descriptionText != null)
-            descriptionText.text = GetDescriptionForItem(data.id);  // описание жёстко задаём по ID
+            descriptionText.text = GetDescriptionForItem(data.id);
         if (priceText != null)
-            priceText.text = isPurchased ? "" : $"Цена: {data.price}";
+            priceText.text = isPurchased ? "" : $"Р¦РµРЅР°: {data.price}";
         if (buyButton != null)
             buyButton.onClick.AddListener(OnBuyButtonClick);
 
@@ -63,7 +63,7 @@ public class ShopItemUI : MonoBehaviour
                 canvasGroup.alpha = 0.5f;
                 buyButton.interactable = false;
                 if (buyButtonText != null)
-                    buyButtonText.text = "Куплено";
+                    buyButtonText.text = "РљСѓРїР»РµРЅРѕ";
                 if (priceText != null)
                     priceText.text = "";
             }
@@ -72,21 +72,21 @@ public class ShopItemUI : MonoBehaviour
                 canvasGroup.alpha = 1f;
                 buyButton.interactable = true;
                 if (buyButtonText != null)
-                    buyButtonText.text = "Купить";
+                    buyButtonText.text = "РљСѓРїРёС‚СЊ";
             }
         }
     }
 
-    // Простейшая реализация описаний по ID товара (можно вынести в отдельный конфиг)
+    // Р’РѕР·РІСЂР°С‰Р°РµС‚ РѕРїРёСЃР°РЅРёРµ РїСЂРµРґРјРµС‚Р° РїРѕ ID (РјРѕР¶РЅРѕ РІС‹РЅРµСЃС‚Рё РІ РѕС‚РґРµР»СЊРЅС‹Р№ С„Р°Р№Р» СЃ РґР°РЅРЅС‹РјРё)
     private string GetDescriptionForItem(int id)
     {
         return id switch
         {
-            1 => "Навсегда увеличивает прочность и производство всех зданий.",
-            2 => "Навсегда усиливает здоровье и урон всех юнитов.",
-            3 => "Ускоряет передвижение всех ваших юнитов.",
-            4 => "Особый аватар для вашего профиля.",
-            _ => "Описание отсутствует."
+            1 => "РџРѕРІС‹С€Р°РµС‚ РїСЂРѕС‡РЅРѕСЃС‚СЊ Рё СЌС„С„РµРєС‚РёРІРЅРѕСЃС‚СЊ РІСЃРµС… Р·РґР°РЅРёР№.",
+            2 => "РЈСЃРёР»РёРІР°РµС‚ Р±РѕРµРІС‹Рµ С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРєРё РІСЃРµС… РІР°С€РёС… СЋРЅРёС‚РѕРІ.",
+            3 => "Р’РѕРѕРґСѓС€РµРІР»СЏРµС‚ РІРѕР№СЃРєР°, РїРѕРІС‹С€Р°СЏ РёС… Р±РѕРµРІРѕР№ РґСѓС….",
+            4 => "РЈРЅРёРєР°Р»СЊРЅС‹Р№ Р°РІР°С‚Р°СЂ РґР»СЏ РІР°С€РµРіРѕ РїСЂРѕС„РёР»СЏ.",
+            _ => "РќРµРёР·РІРµСЃС‚РЅС‹Р№ РїСЂРµРґРјРµС‚."
         };
     }
 

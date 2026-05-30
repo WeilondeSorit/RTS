@@ -10,9 +10,14 @@ public class AchievementsManager : MonoBehaviour
     public Transform achievementsContainer;
     public GameObject achievementPrefab;
 
-    private string serverUrl = "http://localhost:8080";
+    // НОВОЕ: ссылка на скрытый объект, который нужно показать (название строго с маленькой буквы)
+    public GameObject gameobject;
+
+    private string serverUrl = "http://localhost:8083";
     private string playerId;
     private string authToken;
+
+
 
     public void Initialize(PlayerData data)
     {
@@ -53,14 +58,17 @@ public class AchievementsManager : MonoBehaviour
         foreach (Transform child in achievementsContainer)
             Destroy(child.gameObject);
 
-        // Настраиваем компоновку один раз (контейнер)
+        // НОВОЕ: сортируем достижения по id, чтобы «первое» было однозначно
+        if (achievements != null && achievements.Length > 0)
+            Array.Sort(achievements, (a, b) => a.id.CompareTo(b.id));
+
         SetupContainerLayout();
 
         foreach (var ach in achievements)
         {
             GameObject item = Instantiate(achievementPrefab, achievementsContainer);
 
-            // Заполняем текстом (размеры берутся из префаба, ничего не трогаем)
+            // Заполняем текстом
             Text textComp = item.GetComponentInChildren<Text>();
             if (textComp != null)
                 textComp.text = $"{ach.name}\n{ach.description}\nПрогресс: {ach.progress}/{ach.requiredValue}";
@@ -71,43 +79,59 @@ public class AchievementsManager : MonoBehaviour
                     tmp.text = $"{ach.name}\n{ach.description}\nПрогресс: {ach.progress}/{ach.requiredValue}";
             }
 
+            // НОВОЕ: работа с кнопкой – удаляем, если награда уже получена
             Button claimButton = item.GetComponentInChildren<Button>();
             if (claimButton != null)
             {
-                bool canClaim = ach.isCompleted && !ach.isRewardClaimed;
-                claimButton.interactable = canClaim;
-                if (canClaim)
+                if (ach.isRewardClaimed)
                 {
-                    int id = ach.id;
-                    claimButton.onClick.RemoveAllListeners();
-                    claimButton.onClick.AddListener(() => StartCoroutine(ClaimReward(id, claimButton)));
+                    // Кнопка «Получить» полностью удаляется из префаба
+                    Destroy(claimButton.gameObject);
+                }
+                else
+                {
+                    bool canClaim = ach.isCompleted && !ach.isRewardClaimed;
+                    claimButton.interactable = canClaim;
+                    if (canClaim)
+                    {
+                        int id = ach.id;
+                        claimButton.onClick.RemoveAllListeners();
+                        claimButton.onClick.AddListener(() => StartCoroutine(ClaimReward(id, claimButton)));
+                    }
                 }
             }
+        }
+
+        // НОВОЕ: показываем / скрываем gameobject в зависимости от статуса первого достижения
+        if (gameobject != null)
+        {
+            bool firstAchievementClaimed = achievements != null &&
+                                           achievements.Length > 0 &&
+                                           achievements[0].isCompleted &&
+                                           achievements[0].isRewardClaimed;
+            gameobject.SetActive(firstAchievementClaimed);
         }
     }
 
     private void SetupContainerLayout()
     {
-        // VerticalLayoutGroup – отвечает за позиционирование
         VerticalLayoutGroup vlg = achievementsContainer.GetComponent<VerticalLayoutGroup>();
         if (vlg == null)
             vlg = achievementsContainer.gameObject.AddComponent<VerticalLayoutGroup>();
 
-        // Настройки, которые не ломают размеры префаба
         vlg.padding = new RectOffset(10, 10, 10, 10);
         vlg.spacing = 10;
         vlg.childAlignment = TextAnchor.UpperLeft;
-        vlg.childControlWidth = true;   // ширина элемента = ширина контейнера (чтобы текст не вылезал)
-        vlg.childControlHeight = false;  // высота берётся из префаба
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = false;
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
 
-        // ContentSizeFitter – чтобы контейнер подстраивался под суммарную высоту элементов
         ContentSizeFitter csf = achievementsContainer.GetComponent<ContentSizeFitter>();
         if (csf == null)
             csf = achievementsContainer.gameObject.AddComponent<ContentSizeFitter>();
-        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained; // ширина фиксирована (берём от родителя)
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;   // высота по содержимому
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
     }
 
     private IEnumerator ClaimReward(int achievementId, Button button)
@@ -122,7 +146,7 @@ public class AchievementsManager : MonoBehaviour
             {
                 Debug.Log("Награда получена!");
                 button.interactable = false;
-                StartCoroutine(LoadAchievements());
+                StartCoroutine(LoadAchievements()); // перезагружаем UI – кнопка исчезнет, а gameobject обновится
                 PlayerData.Instance?.LoadPlayerData();
             }
             else

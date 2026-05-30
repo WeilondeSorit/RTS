@@ -14,7 +14,7 @@ public class ShopManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI currencyText;
 
     [Header("Settings")]
-    [SerializeField] private string serverUrl = "http://localhost:8080";
+    [SerializeField] private string serverUrl = "http://localhost:8083";
     [SerializeField] private string shopIconsPath = "ShopIcons/";
 
     private List<ShopItemData> shopItems = new List<ShopItemData>();
@@ -125,7 +125,12 @@ public class ShopManager : MonoBehaviour
                 PlayerData.Instance.purchasedItems = response.purchasedItems;
                 PlayerData.Instance.SavePlayerData();
                 PlayerData.Instance.NotifyResourcesChanged();
+                if (ShopEffectManager.Instance != null)
+                    ShopEffectManager.Instance.ApplyEffect(itemId);
                 RefreshPurchasedStates();
+
+
+
             }
             else
             {
@@ -151,7 +156,7 @@ public class ShopManager : MonoBehaviour
     {
         if (currencyText != null && PlayerData.Instance != null)
         {
-            currencyText.text = $"Валюта: {PlayerData.Instance.currency}";
+            currencyText.text = $"РЈ РІР°СЃ РµСЃС‚СЊ: {PlayerData.Instance.currency}";
         }
     }
 
@@ -161,7 +166,6 @@ public class ShopManager : MonoBehaviour
             PlayerData.Instance.OnResourcesChanged -= UpdateCurrencyDisplay;
     }
 
-    // Вспомогательные приватные классы для десериализации
     [System.Serializable]
     private class ShopItemList
     {

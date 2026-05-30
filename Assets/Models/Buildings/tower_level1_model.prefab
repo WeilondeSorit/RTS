@@ -105,6 +105,12 @@ MonoBehaviour:
   maxHealth: 100
   health: 0
   baseHealth: 500
+  attackRange: 15
+  attackCooldown: 2
+  damage: 30
+  targetLayer:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!1 &9082444715373693646
 GameObject:
   m_ObjectHideFlags: 0

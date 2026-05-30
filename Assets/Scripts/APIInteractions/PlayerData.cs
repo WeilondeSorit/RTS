@@ -44,7 +44,7 @@ public class PlayerData : MonoBehaviour
     private Coroutine consumptionCoroutine;
 
     [Header("Servers")]
-    [SerializeField] private string accountServerUrl = "http://localhost:8080";
+    [SerializeField] private string accountServerUrl = "http://localhost:8083";
     [SerializeField] private string sessionServerUrl = "http://localhost:8082";
     [SerializeField] private float autoSaveInterval = 30f;
 

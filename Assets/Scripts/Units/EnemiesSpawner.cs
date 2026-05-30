@@ -23,6 +23,7 @@ public class EnemiesSpawner : MonoBehaviour
 
     void Start()
     {
+        
         spawnPos = FindClosest("EnemyBase");
         StartCoroutine(SpawnWaves());
     }

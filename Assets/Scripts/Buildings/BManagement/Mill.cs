@@ -3,8 +3,8 @@ using UnityEngine;
 
 public class Mill : BasicBulding
 {
-    [SerializeField] private int foodPerCycle = 20;
-    [SerializeField] private float cycleTime = 10f;
+    [SerializeField] public int foodPerCycle = 20;
+    [SerializeField] public float cycleTime = 10f;
 
     private Coroutine productionCoroutine;
 

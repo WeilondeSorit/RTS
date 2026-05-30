@@ -21,17 +21,17 @@ public class LeaderboardDisplay : MonoBehaviour
 
         if (leaderboardTexts == null || leaderboardTexts.Length != 4)
         {
-            Debug.LogError($"[Leaderboard] Ошибка: массив содержит {leaderboardTexts?.Length ?? 0} элементов вместо 4!");
+            Debug.LogError($"[Leaderboard] Error: Array has {leaderboardTexts?.Length ?? 0} elements, but 4 are required!");
             return;
         }
 
-        // Проверим, что все ссылки не null и GameObject активны
+        // Check that each text field is assigned and the GameObject is active
         for (int i = 0; i < leaderboardTexts.Length; i++)
         {
             if (leaderboardTexts[i] == null)
-                Debug.LogError($"[Leaderboard] Элемент {i} в массиве равен null!");
+                Debug.LogError($"[Leaderboard] Element {i} in the array is null!");
             else
-                Debug.Log($"[Leaderboard] Элемент {i}: привязан к объекту '{leaderboardTexts[i].name}', активен в иерархии: {leaderboardTexts[i].gameObject.activeInHierarchy}");
+                Debug.Log($"[Leaderboard] Element {i}: assigned to text field '{leaderboardTexts[i].name}', GameObject active: {leaderboardTexts[i].gameObject.activeInHierarchy}");
         }
 
         StartCoroutine(RefreshLeaderboardCoroutine());
@@ -39,7 +39,7 @@ public class LeaderboardDisplay : MonoBehaviour
 
     private IEnumerator RefreshLeaderboardCoroutine()
     {
-        Debug.Log("[Leaderboard] Корутина обновления запущена.");
+        Debug.Log("[Leaderboard] Starting leaderboard refresh coroutine.");
         while (true)
         {
             yield return StartCoroutine(LoadLeaderboard());
@@ -50,27 +50,27 @@ public class LeaderboardDisplay : MonoBehaviour
     private IEnumerator LoadLeaderboard()
     {
         string url = $"{serverUrl}/leaderboard";
-        Debug.Log($"[Leaderboard] Отправляю запрос к {url}...");
+        Debug.Log($"[Leaderboard] Sending request to {url}...");
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
             yield return request.SendWebRequest();
 
-            Debug.Log($"[Leaderboard] Запрос завершён. Result: {request.result}, ResponseCode: {request.responseCode}");
+            Debug.Log($"[Leaderboard] Request completed. Result: {request.result}, ResponseCode: {request.responseCode}");
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"[Leaderboard] Ошибка сети: {request.error}");
-                SetAllTexts("Ошибка сети");
+                Debug.LogError($"[Leaderboard] Request error: {request.error}");
+                SetAllTexts("Connection error");
                 yield break;
             }
 
             string json = request.downloadHandler.text;
-            Debug.Log($"[Leaderboard] Получен JSON (длина {json.Length}): {json}");
+            Debug.Log($"[Leaderboard] Received JSON (length {json.Length}): {json}");
 
             if (string.IsNullOrWhiteSpace(json))
             {
-                Debug.LogError("[Leaderboard] Ответ сервера пуст!");
-                SetAllTexts("Нет данных");
+                Debug.LogError("[Leaderboard] Received empty JSON!");
+                SetAllTexts("No data");
                 yield break;
             }
 
@@ -78,12 +78,12 @@ public class LeaderboardDisplay : MonoBehaviour
             try
             {
                 entries = JsonConvert.DeserializeObject<List<LeaderboardEntry>>(json);
-                Debug.Log($"[Leaderboard] Десериализовано {entries?.Count ?? 0} записей.");
+                Debug.Log($"[Leaderboard] Deserialized {entries?.Count ?? 0} entries.");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[Leaderboard] Ошибка десериализации JSON: {ex.Message}");
-                SetAllTexts("Ошибка формата");
+                Debug.LogError($"[Leaderboard] JSON deserialization error: {ex.Message}");
+                SetAllTexts("Data error");
                 yield break;
             }
 
@@ -94,14 +94,14 @@ public class LeaderboardDisplay : MonoBehaviour
                 if (leaderboardTexts[i] == null) continue;
                 if (i < entries.Count)
                 {
-                    string newText = $"{i + 1}. {entries[i].login} (побед: {entries[i].wins})";
-                    Debug.Log($"[Leaderboard] Назначаю текст в элемент {i}: '{newText}'");
+                    string newText = $"{i + 1}. {entries[i].login} (Wins: {entries[i].wins})";
+                    Debug.Log($"[Leaderboard] Setting text for slot {i}: '{newText}'");
                     leaderboardTexts[i].text = newText;
                 }
                 else
                 {
                     string emptyText = $"{i + 1}. ---";
-                    Debug.Log($"[Leaderboard] Назначаю текст в элемент {i}: '{emptyText}' (нет записи)");
+                    Debug.Log($"[Leaderboard] Setting text for slot {i}: '{emptyText}' (no entry)");
                     leaderboardTexts[i].text = emptyText;
                 }
             }

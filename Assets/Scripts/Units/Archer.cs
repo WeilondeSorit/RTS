@@ -22,6 +22,15 @@ public class Archer : BasicUnit
     // Статический счётчик церквей (MoraleBuilding)
     public static int churchesCount = 0;
 
+    private void Start()
+    {
+        // Применяем постоянные улучшения
+        if (ShopEffectManager.Instance != null)
+        {
+            ShopEffectManager.Instance.ApplyUnitUpgrade(this);
+            ShopEffectManager.Instance.ApplySpeedBoost(this);
+        }
+    }
     void Update()
     {
         attackRange = 5f;

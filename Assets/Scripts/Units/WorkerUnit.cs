@@ -3,9 +3,15 @@ using UnityEngine.AI;
 
 public class WorkerUnit : BasicUnit
 {
-	
-//очень полезный файл. он нужен только для того, чтобы триггерить ClickHandler 
-	/*
+
+    public void Start()
+    {
+        base.Start();
+		health = 100; // Устанавливаем здоровье для рабочего
+    }
+
+    //очень полезный файл. он нужен только для того, чтобы триггерить ClickHandler 
+    /*
 	public void GatherResource()
 	{   
 		if (unitAgent == null)

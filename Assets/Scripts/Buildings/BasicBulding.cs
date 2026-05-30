@@ -15,6 +15,10 @@ public class BasicBulding : Health
         maxHealth = baseHealth;
         base.Start();
         InitializeBuilding();
+
+        // === НОВОЕ: применяем эффект улучшения зданий, если куплено ===
+        if (ShopEffectManager.Instance != null)
+            ShopEffectManager.Instance.ApplyBuildingUpgrade(this);
     }
 
     private void InitializeBuilding()
