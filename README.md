@@ -1,14 +1,29 @@
-В этой игре планируется увлекательный игровой процесс, где вам предстоит уничтожать врагов, строить города и создавать армии
+# RTS
 
-Я планирую переписать структуру проекта на что то примерно такое
+Real-time strategy game built with Unity.
 
-Unity Client       → Game Persistence Service → Redis
-                   → (в будущем) Analytics Service
-                   → (в будущем) Notification Service
+## Components
 
-А пока игра не готова, я продолжу создавать баги
+- `Assets` – game assets (models, scenes, scripts, UI, sounds)
+- `GameRun` – executable builds (Windows and Android)
+- `Packages` – Unity package manifests
+- `ProjectSettings` – Unity project configuration
 
-сейчас актуален баг:
-пока нет привязки к аккаунту
-реализован не весь бэкЭкнд
+## How to Run
 
+### From Source (Unity)
+
+1. Open the project in Unity (recommended version: 2021.3 or later)
+2. Open the main scene from `Assets/Scenes`
+3. Press Play in the Unity Editor
+
+### Pre-built Binaries
+
+Download and run the executable from the `GameRun` folder:
+
+- **Windows**: `GameRun/Castle Warrior.exe`
+- **Android**: `GameRun/Android/` (APK file)
+
+## Technologies
+
+- Unity Game Engine (C# scripting)
